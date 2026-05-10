@@ -1,44 +1,15 @@
 import { createClient } from '@/lib/supabase/server'
-import { todayDateKey } from '@/lib/date'
 import { redirect } from 'next/navigation'
 import DashboardClient from './DashboardClient'
-import { demoDoneLogs, demoGoals, demoReviews, demoTodayLogs, demoUser, isDemoMode } from '@/lib/demo'
 
 export default async function DashboardPage() {
-  const demoMode = isDemoMode()
-
-  if (demoMode) {
-    const today = todayDateKey()
-    const displayDate = new Date().toLocaleDateString('en-US', {
-      weekday: 'long',
-      month: 'long',
-      day: 'numeric',
-    })
-
-    return (
-      <DashboardClient
-        userId={demoUser.id}
-        goals={demoGoals.filter((goal) => goal.is_active)}
-        initialLogs={demoTodayLogs()}
-        allDoneLogs={demoDoneLogs()}
-        displayName={demoUser.display_name}
-        initialStreak={demoUser.streak_count}
-        mode={demoUser.mode}
-        today={today}
-        displayDate={displayDate}
-        existingReview={demoReviews().at(-1)}
-        demoMode
-      />
-    )
-  }
-
   const supabase = createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) redirect('/')
 
-  const today = todayDateKey()
+  const today = new Date().toISOString().split('T')[0]
 
   const [{ data: profile }, { data: goals }, { data: todayLogs }, { data: allDoneLogs }, { data: existingReview }] =
     await Promise.all([

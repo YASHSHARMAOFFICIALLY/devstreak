@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { formatDateKey } from '@/lib/date'
 import {
   Plus,
   Trash2,
@@ -71,7 +70,7 @@ function calculateGoalStreak(goalId: string, doneLogs: DoneLog[]): number {
   for (let i = 0; i < 365; i++) {
     const d = new Date(today)
     d.setDate(d.getDate() - i)
-    const dateStr = formatDateKey(d)
+    const dateStr = d.toISOString().split('T')[0]
     if (dateSet.has(dateStr)) {
       streak++
     } else {
@@ -86,12 +85,10 @@ export default function GoalsClient({
   initialGoals,
   doneLogs: initialDoneLogs,
   userId,
-  demoMode = false,
 }: {
   initialGoals: Goal[]
   doneLogs: DoneLog[]
   userId: string
-  demoMode?: boolean
 }) {
   const [goals, setGoals] = useState<Goal[]>(initialGoals)
   const [doneLogs] = useState<DoneLog[]>(initialDoneLogs)
@@ -100,13 +97,11 @@ export default function GoalsClient({
   const [category, setCategory] = useState<Category>('code')
   const [adding, setAdding] = useState(false)
   const [showPaused, setShowPaused] = useState(false)
-  const supabase = demoMode ? null : createClient()
+  const supabase = createClient()
 
   // Realtime subscription
   useEffect(() => {
-    if (demoMode) return
-
-    const channel = supabase!
+    const channel = supabase
       .channel('goals-realtime')
       .on(
         'postgres_changes',
@@ -136,32 +131,14 @@ export default function GoalsClient({
       .subscribe()
 
     return () => {
-      supabase!.removeChannel(channel)
+      supabase.removeChannel(channel)
     }
-  }, [demoMode, supabase, userId])
+  }, [supabase, userId])
 
   const addGoal = useCallback(async () => {
     if (!title.trim() || adding) return
     setAdding(true)
-    if (demoMode) {
-      setGoals((prev) => [
-        {
-          id: `demo-goal-${Date.now()}`,
-          title: title.trim(),
-          category,
-          is_active: true,
-          created_at: new Date().toISOString(),
-          user_id: userId,
-        },
-        ...prev,
-      ])
-      setTitle('')
-      setShowForm(false)
-      setAdding(false)
-      return
-    }
-
-    const { error } = await supabase!
+    const { error } = await supabase
       .from('goals')
       .insert({ user_id: userId, title: title.trim(), category, is_active: true })
 
@@ -170,29 +147,17 @@ export default function GoalsClient({
       setShowForm(false)
     }
     setAdding(false)
-  }, [title, category, adding, demoMode, supabase, userId])
+  }, [title, category, adding, supabase, userId])
 
   async function toggleActive(goal: Goal) {
-    if (demoMode) {
-      setGoals((prev) =>
-        prev.map((g) => (g.id === goal.id ? { ...g, is_active: !g.is_active } : g))
-      )
-      return
-    }
-
-    await supabase!
+    await supabase
       .from('goals')
       .update({ is_active: !goal.is_active })
       .eq('id', goal.id)
   }
 
   async function deleteGoal(id: string) {
-    if (demoMode) {
-      setGoals((prev) => prev.filter((goal) => goal.id !== id))
-      return
-    }
-
-    await supabase!.from('goals').delete().eq('id', id)
+    await supabase.from('goals').delete().eq('id', id)
   }
 
   const active = goals.filter((g) => g.is_active)
@@ -202,7 +167,7 @@ export default function GoalsClient({
     <div className="space-y-6">
       {/* New Goal Form / Button */}
       {showForm ? (
-        <div className="space-y-4 rounded-lg border border-amber-400/20 bg-zinc-900 p-5 shadow-xl shadow-black/20">
+        <div className="bg-zinc-900 border border-amber-400/20 rounded-xl p-5 space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold text-zinc-200">New Goal</h3>
             <button
@@ -274,7 +239,7 @@ export default function GoalsClient({
       ) : (
         <button
           onClick={() => setShowForm(true)}
-          className="flex items-center gap-2 rounded-lg bg-amber-400 px-4 py-2.5 text-sm font-semibold text-zinc-900 shadow-lg shadow-black/20 transition-all hover:-translate-y-0.5 hover:bg-amber-300"
+          className="flex items-center gap-2 bg-amber-400 hover:bg-amber-300 text-zinc-900 font-semibold px-4 py-2.5 rounded-xl text-sm transition-colors"
         >
           <Plus className="w-4 h-4" />
           New Goal
@@ -290,7 +255,7 @@ export default function GoalsClient({
         </div>
 
         {active.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-zinc-800 bg-zinc-900/60 p-8 text-center">
+          <div className="border border-dashed border-zinc-800 rounded-xl p-8 text-center">
             <p className="text-zinc-600 text-sm">No active goals yet. Add one above.</p>
           </div>
         ) : (
@@ -366,7 +331,7 @@ function GoalCardFull({
   paused?: boolean
 }) {
   return (
-    <div className="group flex flex-col gap-3 rounded-lg border border-zinc-800 bg-zinc-900 p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-zinc-700 hover:shadow-lg hover:shadow-black/20">
+    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex flex-col gap-3 hover:border-zinc-700 transition-colors group">
       {/* Top: category badge + actions */}
       <div className="flex items-center justify-between">
         <span
@@ -381,7 +346,7 @@ function GoalCardFull({
           {goal.category}
         </span>
 
-        <div className="flex items-center gap-1 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <button
             onClick={onToggle}
             className="p-1 rounded text-zinc-600 hover:text-amber-400 transition-colors"

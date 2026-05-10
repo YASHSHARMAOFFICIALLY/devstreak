@@ -1,5 +1,4 @@
 import { createClient } from '@/lib/supabase/server'
-import { addDaysToDateKey } from '@/lib/date'
 import { NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 
@@ -24,36 +23,40 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const { date } = await request.json()
+  const { user_id, date } = await request.json()
 
-  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+  if (!date) {
     return NextResponse.json({ error: 'Missing date' }, { status: 400 })
   }
 
+  const targetUserId = user_id ?? user.id
+
   // Parallel Supabase queries
-  const sevenDaysAgoStr = addDaysToDateKey(date, -6)
+  const sevenDaysAgo = new Date(date)
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6)
+  const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0]
 
   const [goalsRes, todayLogsRes, weekLogsRes, userRes] = await Promise.all([
     supabase
       .from('goals')
       .select('id, title, category')
-      .eq('user_id', user.id)
+      .eq('user_id', targetUserId)
       .eq('is_active', true),
     supabase
       .from('daily_logs')
       .select('goal_id, status, skip_reason, notes')
-      .eq('user_id', user.id)
+      .eq('user_id', targetUserId)
       .eq('date', date),
     supabase
       .from('daily_logs')
       .select('goal_id, status, date')
-      .eq('user_id', user.id)
+      .eq('user_id', targetUserId)
       .gte('date', sevenDaysAgoStr)
       .lte('date', date),
     supabase
       .from('users')
       .select('mode, streak_count')
-      .eq('id', user.id)
+      .eq('id', targetUserId)
       .single(),
   ])
 
@@ -107,15 +110,7 @@ export async function POST(request: Request) {
   const focusScore = calcFocusScore(done.length, goals.length, streak)
 
   // Build prompt
-  const systemPrompt = `You are a strict AI accountability partner reviewing someone's daily developer goals. Be direct, specific, and reference the actual data. Never be generic or use filler phrases. Always output exactly these four labeled sections (each on its own line):
-
-[FOCUS] 1–2 sentences on their focus score and what drove it today.
-[REVIEW] 2–3 sentences calling out what went well or didn't — be specific to the actual goals.
-[TOMORROW] 1 sentence prediction or concrete recommendation for tomorrow.
-[BURNOUT] 1 sentence on burnout risk.
-
-If mode is "roast", be sharp and call out excuses without being cruel. If mode is "motivate", be energetic but still specific.
-On the very last line write exactly: "burnout: true" or "burnout: false".`
+  const systemPrompt = `You are a strict AI accountability partner reviewing someone's daily developer goals. Be direct, specific, and reference the actual data. Max 4 sentences. Never be generic or use filler phrases. End your response with exactly one line: "burnout: true" or "burnout: false".`
 
   const skippedStr =
     skipped.length === 0
@@ -128,7 +123,9 @@ Completed (${done.length}): ${done.length > 0 ? done.map((t) => `"${t}"`).join('
 Skipped (${skipped.length}): ${skippedStr}
 Pending (${pending.length}): ${pending.length > 0 ? pending.map((t) => `"${t}"`).join(', ') : 'None'}
 Streak: ${streak} days
-Last 7 days skip pattern: ${skipPatternStr}`
+Last 7 days skip pattern: ${skipPatternStr}
+
+Write a nightly review. If mode is "roast", be sharp and call out excuses without being cruel. If mode is "motivate", be energetic but still specific. End with one prediction or warning about tomorrow. Then on the very last line write exactly: "burnout: true" or "burnout: false".`
 
   if (!process.env.ANTHROPIC_API_KEY) {
     // Fallback: no API key
@@ -168,7 +165,7 @@ Last 7 days skip pattern: ${skipPatternStr}`
     .from('ai_reviews')
     .upsert(
       {
-        user_id: user.id,
+        user_id: targetUserId,
         date,
         content,
         burnout_flag: burnoutFlag,

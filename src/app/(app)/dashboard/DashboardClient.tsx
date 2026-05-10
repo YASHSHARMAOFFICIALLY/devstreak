@@ -4,9 +4,6 @@ import { useState, useCallback } from 'react'
 import Link from 'next/link'
 import GoalCard from '@/components/GoalCard'
 import StreakBadge from '@/components/StreakBadge'
-import StreakHeatmap from '@/components/StreakHeatmap'
-import AchievementBadges from '@/components/AchievementBadges'
-import GitHubActivityCard from '@/components/GitHubActivityCard'
 import {
   Brain,
   Plus,
@@ -19,17 +16,8 @@ import {
   Copy,
   Check,
   Bird,
-  Code2,
-  Dumbbell,
-  BookOpen,
-  GitPullRequest,
-  MoreHorizontal,
-  Target,
-  TrendingUp,
-  ChevronRight,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { formatDateKey } from '@/lib/date'
 
 type Status = 'done' | 'skip' | 'pending'
 type Category = 'code' | 'fitness' | 'learning' | 'oss' | 'other'
@@ -71,77 +59,6 @@ type CardData = {
   avatar_url: string | null
 }
 
-// ─── Structured review sections ──────────────────────────────────────────────
-type ReviewSections = {
-  focus?: string
-  review?: string
-  tomorrow?: string
-  burnout?: string
-  raw: string
-}
-
-function parseReviewSections(content: string): ReviewSections {
-  const sections: ReviewSections = { raw: content }
-  const tagRe = /\[(FOCUS|REVIEW|TOMORROW|BURNOUT)\]([\s\S]*?)(?=\[(?:FOCUS|REVIEW|TOMORROW|BURNOUT)\]|$)/gi
-  let match
-  while ((match = tagRe.exec(content)) !== null) {
-    const tag = match[1].toLowerCase() as keyof Omit<ReviewSections, 'raw'>
-    sections[tag] = match[2].trim()
-  }
-  return sections
-}
-
-// ─── Quick-add categories for onboarding empty state ─────────────────────────
-const QUICK_GOALS: { title: string; category: Category; icon: React.ReactNode }[] = [
-  { title: 'Commit to GitHub daily', category: 'code', icon: <Code2 className="w-4 h-4" /> },
-  { title: 'Run or exercise 30 min', category: 'fitness', icon: <Dumbbell className="w-4 h-4" /> },
-  { title: 'Read / study 20 min', category: 'learning', icon: <BookOpen className="w-4 h-4" /> },
-  { title: 'Review an open-source PR', category: 'oss', icon: <GitPullRequest className="w-4 h-4" /> },
-  { title: 'Ship a side-project task', category: 'other', icon: <MoreHorizontal className="w-4 h-4" /> },
-]
-
-// ─── Status banner ────────────────────────────────────────────────────────────
-function StatusBanner({
-  doneCount,
-  total,
-  streak,
-  mode,
-}: {
-  doneCount: number
-  total: number
-  streak: number
-  mode: string
-}) {
-  if (total === 0) return null
-
-  let message: string
-  let color: string
-
-  if (doneCount === total) {
-    message = streak > 6
-      ? `Full completion: ${streak} active days in a row.`
-      : 'All goals completed for today.'
-    color = 'border-green-500/30 bg-green-500/5 text-green-400'
-  } else if (doneCount === 0) {
-    message = mode === 'roast'
-      ? 'No progress logged yet. Start with one visible action.'
-      : 'No progress logged yet. Complete one small task to start momentum.'
-    color = 'border-zinc-700 bg-zinc-900/60 text-zinc-400'
-  } else {
-    const remaining = total - doneCount
-    message = mode === 'roast'
-      ? `${doneCount}/${total} complete. ${remaining} task${remaining === 1 ? '' : 's'} still need proof.`
-      : `${doneCount}/${total} complete. ${remaining} task${remaining === 1 ? '' : 's'} left.`
-    color = 'border-amber-500/20 bg-amber-500/5 text-amber-300'
-  }
-
-  return (
-    <div className={`rounded-lg border px-4 py-2.5 text-sm font-medium ${color}`}>
-      {message}
-    </div>
-  )
-}
-
 function calculateStreak(doneLogs: DoneLog[]): number {
   const doneDates = new Set(doneLogs.map((l) => l.date))
   let streak = 0
@@ -150,7 +67,7 @@ function calculateStreak(doneLogs: DoneLog[]): number {
   for (let i = 0; i < 365; i++) {
     const d = new Date(today)
     d.setDate(d.getDate() - i)
-    const dateStr = formatDateKey(d)
+    const dateStr = d.toISOString().split('T')[0]
 
     if (doneDates.has(dateStr)) {
       streak++
@@ -162,7 +79,6 @@ function calculateStreak(doneLogs: DoneLog[]): number {
   return streak
 }
 
-// ─── Polished share card ──────────────────────────────────────────────────────
 function VisualProgressCard({ card }: { card: CardData }) {
   const dateFormatted = new Date(card.date + 'T12:00:00').toLocaleDateString('en-US', {
     month: 'short',
@@ -171,128 +87,65 @@ function VisualProgressCard({ card }: { card: CardData }) {
   })
 
   return (
-    <div className="w-full max-w-sm overflow-hidden rounded-2xl border border-zinc-700/60 bg-gradient-to-br from-zinc-900 via-zinc-900 to-zinc-800 shadow-2xl shadow-black/40">
-      {/* Amber accent stripe */}
-      <div className="h-1 w-full bg-gradient-to-r from-amber-500 via-amber-400 to-amber-300" />
+    <div className="rounded-2xl bg-gradient-to-br from-zinc-900 via-zinc-900 to-zinc-800 border border-zinc-700 p-6 space-y-5 w-full max-w-sm">
+      {/* Top bar */}
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-semibold text-amber-400 uppercase tracking-widest">DevStreak</span>
+        <span className="text-xs text-zinc-500">{dateFormatted}</span>
+      </div>
 
-      <div className="space-y-5 p-6">
-        {/* Top bar */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5">
-            <Flame className="h-3.5 w-3.5 text-amber-400" />
-            <span className="text-xs font-bold uppercase tracking-widest text-amber-400">DevStreak</span>
-          </div>
-          <span className="text-xs text-zinc-500">{dateFormatted}</span>
-        </div>
-
-        {/* User */}
-        <div className="flex items-center gap-3">
-          {card.avatar_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={card.avatar_url}
-              alt={card.name}
-              className="h-11 w-11 rounded-full ring-2 ring-amber-400/30"
-            />
-          ) : (
-            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-amber-400/20 text-lg font-bold text-amber-400">
-              {card.name[0]?.toUpperCase()}
-            </div>
-          )}
-          <div>
-            <p className="text-sm font-bold text-zinc-100">{card.name}</p>
-            <p className="text-xs text-zinc-500">@{card.username}</p>
-          </div>
-        </div>
-
-        {/* Goal */}
-        {card.goal && (
-          <div className="rounded-lg border border-zinc-700/50 bg-zinc-800/60 px-3 py-2.5">
-            <p className="mb-0.5 text-[10px] uppercase tracking-wider text-zinc-500">Completed</p>
-            <p className="text-sm font-semibold text-zinc-200">{card.goal}</p>
+      {/* User */}
+      <div className="flex items-center gap-3">
+        {card.avatar_url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={card.avatar_url} alt={card.name} className="w-10 h-10 rounded-full ring-2 ring-amber-400/40" />
+        ) : (
+          <div className="w-10 h-10 rounded-full bg-amber-400/20 flex items-center justify-center text-amber-400 font-bold text-lg">
+            {card.name[0]?.toUpperCase()}
           </div>
         )}
-
-        {/* Stats */}
-        <div className="grid grid-cols-3 divide-x divide-zinc-800">
-          <div className="space-y-0.5 pr-3 text-center">
-            <div className="flex items-center justify-center gap-1">
-              <Flame className="h-3.5 w-3.5 text-amber-400" />
-              <span className="text-2xl font-black tabular-nums text-amber-400">{card.streak}</span>
-            </div>
-            <p className="text-[10px] uppercase tracking-wider text-zinc-600">Streak</p>
-          </div>
-          <div className="space-y-0.5 px-3 text-center">
-            <p className="text-2xl font-black tabular-nums text-green-400">{card.goalsDone}</p>
-            <p className="text-[10px] uppercase tracking-wider text-zinc-600">Done</p>
-          </div>
-          {card.focusScore != null ? (
-            <div className="space-y-0.5 pl-3 text-center">
-              <p className="text-2xl font-black tabular-nums text-purple-400">
-                {card.focusScore.toFixed(1)}
-              </p>
-              <p className="text-[10px] uppercase tracking-wider text-zinc-600">Focus</p>
-            </div>
-          ) : (
-            <div />
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="flex items-center gap-1.5 border-t border-zinc-800 pt-3">
-          <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-amber-400" />
-          <p className="text-[10px] uppercase tracking-wider text-zinc-600">Building in public</p>
+        <div>
+          <p className="text-sm font-bold text-zinc-100">{card.name}</p>
+          <p className="text-xs text-zinc-500">@{card.username}</p>
         </div>
       </div>
-    </div>
-  )
-}
 
-// ─── Structured AI Review display ─────────────────────────────────────────────
-function StructuredReview({ review }: { review: Review }) {
-  const sections = parseReviewSections(review.content)
-  const hasStructure = sections.focus || sections.review || sections.tomorrow || sections.burnout
+      {/* Goal */}
+      {card.goal && (
+        <div className="bg-zinc-800/60 rounded-lg px-3 py-2">
+          <p className="text-xs text-zinc-500 mb-0.5">Goal completed</p>
+          <p className="text-sm text-zinc-200 font-medium">{card.goal}</p>
+        </div>
+      )}
 
-  if (!hasStructure) {
-    return (
-      <p className="text-sm text-zinc-300 leading-relaxed whitespace-pre-wrap">{review.content}</p>
-    )
-  }
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="text-center space-y-1">
+          <div className="flex items-center justify-center gap-1">
+            <Flame className="w-4 h-4 text-amber-400" />
+            <span className="text-xl font-black text-amber-400 tabular-nums">{card.streak}</span>
+          </div>
+          <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Streak</p>
+        </div>
 
-  return (
-    <div className="space-y-3">
-      {sections.focus && (
-        <div className="space-y-1">
-          <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-amber-400">
-            <Target className="h-3 w-3" /> Focus
-          </p>
-          <p className="text-sm text-zinc-300 leading-relaxed">{sections.focus}</p>
+        <div className="text-center space-y-1">
+          <p className="text-xl font-black text-green-400 tabular-nums">{card.goalsDone}</p>
+          <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Done</p>
         </div>
-      )}
-      {sections.review && (
-        <div className="space-y-1">
-          <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-purple-400">
-            <Brain className="h-3 w-3" /> Review
-          </p>
-          <p className="text-sm text-zinc-300 leading-relaxed">{sections.review}</p>
-        </div>
-      )}
-      {sections.tomorrow && (
-        <div className="space-y-1">
-          <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-blue-400">
-            <TrendingUp className="h-3 w-3" /> Tomorrow
-          </p>
-          <p className="text-sm text-zinc-300 leading-relaxed">{sections.tomorrow}</p>
-        </div>
-      )}
-      {sections.burnout && (
-        <div className="space-y-1">
-          <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-red-400">
-            <AlertTriangle className="h-3 w-3" /> Burnout Watch
-          </p>
-          <p className="text-sm text-red-300 leading-relaxed">{sections.burnout}</p>
-        </div>
-      )}
+
+        {card.focusScore != null && (
+          <div className="text-center space-y-1">
+            <p className="text-xl font-black text-purple-400 tabular-nums">{card.focusScore.toFixed(1)}</p>
+            <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Focus</p>
+          </div>
+        )}
+      </div>
+
+      {/* Footer */}
+      <div className="border-t border-zinc-800 pt-3 flex items-center gap-1.5">
+        <div className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+        <p className="text-[10px] text-zinc-600 uppercase tracking-wider">Building in public</p>
+      </div>
     </div>
   )
 }
@@ -308,7 +161,6 @@ export default function DashboardClient({
   today,
   displayDate,
   existingReview,
-  demoMode = false,
 }: {
   userId: string
   goals: Goal[]
@@ -320,9 +172,8 @@ export default function DashboardClient({
   today: string
   displayDate: string
   existingReview?: Review | null
-  demoMode?: boolean
 }) {
-  const supabase = demoMode ? null : createClient()
+  const supabase = createClient()
 
   const buildStatusMap = (logs: Log[]) => {
     const map = new Map<string, { logId: string; status: Status }>()
@@ -345,74 +196,52 @@ export default function DashboardClient({
   const [cardData, setCardData] = useState<CardData | null>(null)
   const [copied, setCopied] = useState(false)
 
-  // Quick-add state (for onboarding empty state)
-  const [quickAdding, setQuickAdding] = useState<string | null>(null)
-
   const doneCount = Array.from(statusMap.values()).filter((v) => v.status === 'done').length
   const total = goals.length
   const progressPct = total === 0 ? 0 : Math.round((doneCount / total) * 100)
 
-  // Unique done dates for heatmap
-  const doneDateStrings = Array.from(new Set(doneLogs.map((l) => l.date)))
-
   const handleStatusChange = useCallback(
-    async (goalId: string, newStatus: Status, logId?: string) => {
-      const nextStatusMap = new Map(statusMap)
-      const existing = nextStatusMap.get(goalId)
-      nextStatusMap.set(goalId, {
-        logId: logId ?? existing?.logId ?? '',
-        status: newStatus,
-      })
-
+    async (goalId: string, newStatus: Status) => {
       setStatusMap((prev) => {
         const next = new Map(prev)
-        next.set(goalId, {
-          logId: logId ?? existing?.logId ?? '',
-          status: newStatus,
-        })
+        const existing = next.get(goalId)
+        if (existing) {
+          next.set(goalId, { ...existing, status: newStatus })
+        }
         return next
       })
 
       const updatedDoneLogs = doneLogs.filter((l) => l.date !== today)
-      const hasDoneToday = Array.from(nextStatusMap.values()).some((v) => v.status === 'done')
+      const todayDone = Array.from(statusMap.values())
+        .map((v, idx) => {
+          const gId = Array.from(statusMap.keys())[idx]
+          const effectiveStatus = gId === goalId ? newStatus : v.status
+          return effectiveStatus === 'done' ? { date: today } : null
+        })
+        .filter(Boolean) as DoneLog[]
 
-      const newDoneLogs = [...updatedDoneLogs, ...(hasDoneToday ? [{ date: today }] : [])]
+      const newDoneLogs = [...updatedDoneLogs, ...(todayDone.length > 0 ? [{ date: today }] : [])]
       setDoneLogs(newDoneLogs)
 
       const newStreak = calculateStreak(newDoneLogs)
       setStreak(newStreak)
 
-      if (demoMode) return
-
-      await supabase!
+      await supabase
         .from('users')
         .update({ streak_count: newStreak })
         .eq('id', userId)
     },
-    [demoMode, doneLogs, statusMap, today, supabase, userId]
+    [doneLogs, statusMap, today, supabase, userId]
   )
 
   const generateReview = useCallback(async () => {
     setGenerating(true)
     setReviewError(null)
-    if (demoMode) {
-      setReview({
-        id: 'demo-review-regenerated',
-        content:
-          '[FOCUS] You kept momentum across product, learning, and health.\n\n[REVIEW] Three goals are complete. The unfinished OSS review is the one task still trying to sneak out the side door.\n\n[TOMORROW] Open the issue queue first, then code.\n\n[BURNOUT] No major burnout signal, but stop work at a sane hour.',
-        burnout_flag: false,
-        focus_score: 8.8,
-        date: today,
-      })
-      setGenerating(false)
-      return
-    }
-
     try {
       const res = await fetch('/api/generate-review', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ date: today }),
+        body: JSON.stringify({ user_id: userId, date: today }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -425,32 +254,12 @@ export default function DashboardClient({
     } finally {
       setGenerating(false)
     }
-  }, [demoMode, today])
+  }, [userId, today])
 
   const shareToWall = useCallback(
     async (goalId: string) => {
       setSharing(true)
       setShareError(null)
-      if (demoMode) {
-        const goal = goals.find((g) => g.id === goalId)
-        setSharedGoalId(goalId)
-        setTweetDraft(
-          `Day ${streak} on DevStreak: completed ${doneCount}/${total} goals and shipped "${goal?.title ?? "today's focus"}".`
-        )
-        setCardData({
-          name: displayName,
-          username: 'yashcodes',
-          streak,
-          goal: goal?.title ?? null,
-          focusScore: review?.focus_score ?? 8.6,
-          goalsDone: doneCount,
-          date: today,
-          avatar_url: null,
-        })
-        setSharing(false)
-        return
-      }
-
       try {
         const res = await fetch('/api/wall', {
           method: 'POST',
@@ -471,7 +280,7 @@ export default function DashboardClient({
         setSharing(false)
       }
     },
-    [demoMode, displayName, doneCount, goals, review?.focus_score, streak, today, total]
+    []
   )
 
   const copyTweet = useCallback(() => {
@@ -482,50 +291,29 @@ export default function DashboardClient({
     })
   }, [tweetDraft])
 
-  const quickAddGoal = useCallback(
-    async (title: string, category: Category) => {
-      setQuickAdding(title)
-      if (demoMode) {
-        setQuickAdding(null)
-        return
-      }
-
-      await supabase!
-        .from('goals')
-        .insert({ user_id: userId, title, category, is_active: true })
-      // Page will re-fetch on next load; notify user
-      setQuickAdding(null)
-      window.location.reload()
-    },
-    [demoMode, supabase, userId]
-  )
-
   const buttonLabel = mode === 'roast' ? 'Roast me tonight' : 'Hype me up'
 
   // First done goal for share button
   const firstDoneGoalId = goals.find((g) => statusMap.get(g.id)?.status === 'done')?.id ?? null
 
   return (
-    <div className="mx-auto max-w-3xl space-y-8">
+    <div className="max-w-2xl mx-auto space-y-8">
       {/* Header */}
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900/70 p-5 shadow-2xl shadow-black/20">
-        <p className="text-sm font-medium text-amber-300">{displayDate}</p>
-        <h1 className="mt-1 text-2xl font-bold text-zinc-100 sm:text-3xl">
-          Hey, {displayName}
+      <div className="space-y-1">
+        <p className="text-zinc-500 text-sm">{displayDate}</p>
+        <h1 className="text-2xl font-bold text-zinc-100">
+          Hey, {displayName} 👋
         </h1>
-        <p className="mt-2 text-sm text-zinc-500">
-          Mark what moved today, then generate a review when you are done.
-        </p>
       </div>
 
       {/* Stats row */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <div className="space-y-1 rounded-lg border border-zinc-800 bg-zinc-900 p-4">
+      <div className="grid grid-cols-3 gap-4">
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-1">
           <p className="text-xs text-zinc-500 uppercase tracking-wider">Streak</p>
           <StreakBadge count={streak} size="md" />
         </div>
 
-        <div className="space-y-1 rounded-lg border border-zinc-800 bg-zinc-900 p-4">
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-1">
           <p className="text-xs text-zinc-500 uppercase tracking-wider">Done today</p>
           <p className="text-xl font-bold text-zinc-100">
             {doneCount}
@@ -533,16 +321,11 @@ export default function DashboardClient({
           </p>
         </div>
 
-        <div className="space-y-1 rounded-lg border border-zinc-800 bg-zinc-900 p-4">
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-1">
           <p className="text-xs text-zinc-500 uppercase tracking-wider">Mode</p>
           <p className="text-sm font-semibold capitalize text-amber-400">{mode}</p>
         </div>
       </div>
-
-      {/* Feature 1: Today status banner */}
-      <StatusBanner doneCount={doneCount} total={total} streak={streak} mode={mode} />
-
-      <GitHubActivityCard />
 
       {/* Progress bar */}
       {total > 0 && (
@@ -550,12 +333,12 @@ export default function DashboardClient({
           <div className="flex justify-between items-center text-xs text-zinc-500">
             <span>Today&apos;s progress</span>
             <span className={doneCount === total ? 'text-green-400 font-semibold' : ''}>
-              {progressPct}%{doneCount === total ? ' — Complete' : ''}
+              {progressPct}%{doneCount === total ? ' — All done! 🔥' : ''}
             </span>
           </div>
-          <div className="h-2.5 overflow-hidden rounded-full bg-zinc-800 ring-1 ring-zinc-700/50">
+          <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-amber-500 to-amber-300 transition-all duration-500"
+              className="h-full bg-amber-400 rounded-full transition-all duration-500"
               style={{ width: `${progressPct}%` }}
             />
           </div>
@@ -577,30 +360,12 @@ export default function DashboardClient({
           </Link>
         </div>
 
-        {/* Feature 4: Onboarding empty state with quick-add */}
         {goals.length === 0 ? (
-          <div className="space-y-4 rounded-lg border border-dashed border-zinc-800 bg-zinc-900/60 p-6">
-            <div className="text-center space-y-1">
-              <p className="text-zinc-400 text-sm font-medium">No goals yet — pick one to start:</p>
-              <p className="text-zinc-600 text-xs">Or <Link href="/goals" className="text-amber-400 hover:underline">create your own →</Link></p>
-            </div>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              {QUICK_GOALS.map((qg) => (
-                <button
-                  key={qg.title}
-                  onClick={() => quickAddGoal(qg.title, qg.category)}
-                  disabled={quickAdding !== null}
-                  className="flex items-center gap-2.5 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2.5 text-left text-sm text-zinc-300 transition-all hover:border-amber-400/40 hover:bg-zinc-700 hover:text-zinc-100 disabled:opacity-50"
-                >
-                  {quickAdding === qg.title ? (
-                    <Loader2 className="h-4 w-4 shrink-0 animate-spin text-amber-400" />
-                  ) : (
-                    <span className="shrink-0 text-zinc-500">{qg.icon}</span>
-                  )}
-                  {qg.title}
-                </button>
-              ))}
-            </div>
+          <div className="bg-zinc-900 border border-dashed border-zinc-800 rounded-xl p-8 text-center space-y-2">
+            <p className="text-zinc-500 text-sm">No active goals yet.</p>
+            <Link href="/goals" className="text-amber-400 text-sm hover:underline">
+              Add your first goal →
+            </Link>
           </div>
         ) : (
           <div className="space-y-2">
@@ -617,24 +382,12 @@ export default function DashboardClient({
                   initialStatus={logEntry?.status ?? 'pending'}
                   date={today}
                   onStatusChange={handleStatusChange}
-                  demoMode={demoMode}
                 />
               )
             })}
           </div>
         )}
       </div>
-
-      {/* Feature 2: 30-day streak heatmap */}
-      <StreakHeatmap doneDates={doneDateStrings} />
-
-      {/* Feature 7: Achievement badges */}
-      <AchievementBadges
-        streak={streak}
-        totalDone={doneLogs.length}
-        doneToday={doneCount}
-        totalGoals={total}
-      />
 
       {/* Nightly Review Section */}
       <div className="space-y-3">
@@ -656,11 +409,11 @@ export default function DashboardClient({
         </div>
 
         {!review ? (
-          <div className="space-y-4 rounded-lg border border-zinc-800 bg-zinc-900 p-5">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 space-y-4">
             <p className="text-sm text-zinc-400">
               {mode === 'roast'
-                ? "Generate a direct review based on today's actual progress."
-                : "Generate a focused review based on today's actual progress."}
+                ? 'Ready to get called out for your slacking?'
+                : 'Get a personalized pep talk based on your day.'}
             </p>
             {reviewError && (
               <p className="text-xs text-red-400 flex items-center gap-1">
@@ -671,7 +424,7 @@ export default function DashboardClient({
             <button
               onClick={generateReview}
               disabled={generating}
-              className="flex items-center gap-2 rounded-lg bg-purple-500 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-purple-400 disabled:bg-purple-800 disabled:opacity-60"
+              className="flex items-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-500 disabled:bg-purple-800 disabled:opacity-60 text-white text-sm font-medium rounded-lg transition-colors"
             >
               {generating ? (
                 <>
@@ -687,7 +440,7 @@ export default function DashboardClient({
             </button>
           </div>
         ) : (
-          <div className="space-y-4 rounded-lg border border-zinc-800 bg-zinc-900 p-5">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 space-y-4">
             {/* Scores */}
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-1.5">
@@ -702,8 +455,10 @@ export default function DashboardClient({
               )}
             </div>
 
-            {/* Feature 3: Structured review display */}
-            <StructuredReview review={review} />
+            {/* Review text */}
+            <p className="text-sm text-zinc-300 leading-relaxed whitespace-pre-wrap">
+              {review.content}
+            </p>
 
             {reviewError && (
               <p className="text-xs text-red-400 flex items-center gap-1">
@@ -716,9 +471,9 @@ export default function DashboardClient({
             <div className="flex items-center gap-3 pt-1 border-t border-zinc-800 flex-wrap">
               <Link
                 href={`/review/${today}`}
-                className="flex items-center gap-0.5 text-xs text-purple-400 hover:text-purple-300 transition-colors"
+                className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
               >
-                View full review <ChevronRight className="w-3 h-3" />
+                View full review page →
               </Link>
 
               {firstDoneGoalId && !sharedGoalId && (
@@ -754,62 +509,57 @@ export default function DashboardClient({
         )}
       </div>
 
-      {/* Feature 5: Post-share polished card + tweet draft */}
+      {/* Post-share: tweet draft + visual card */}
       {tweetDraft && cardData && (
         <div className="space-y-6">
           {/* Tweet draft */}
-          <div className="space-y-3 rounded-lg border border-zinc-800 bg-zinc-900 p-5">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-zinc-400">
-                <Bird className="h-3.5 w-3.5 text-sky-400" />
+              <h3 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider flex items-center gap-2">
+                <Bird className="w-3.5 h-3.5 text-sky-400" />
                 Tweet Draft
               </h3>
-              <span className="text-xs tabular-nums text-zinc-600">{tweetDraft.length}/240</span>
+              <span className="text-xs text-zinc-600 tabular-nums">{tweetDraft.length}/240</span>
             </div>
 
-            <textarea
-              readOnly
-              value={tweetDraft}
-              className="h-24 w-full resize-none rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-3 text-sm leading-relaxed text-zinc-200 focus:outline-none"
-            />
+            <div className="relative">
+              <textarea
+                readOnly
+                value={tweetDraft}
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-3 text-sm text-zinc-200 resize-none h-24 leading-relaxed focus:outline-none"
+              />
+            </div>
 
             <div className="flex gap-2">
               <button
                 onClick={copyTweet}
-                className="flex items-center gap-1.5 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-xs font-medium text-zinc-300 transition-colors hover:bg-zinc-700"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-300 text-xs font-medium rounded-lg transition-colors"
               >
-                {copied ? <Check className="h-3 w-3 text-green-400" /> : <Copy className="h-3 w-3" />}
+                {copied ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
                 {copied ? 'Copied!' : 'Copy'}
               </button>
               <a
                 href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetDraft)}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1.5 rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-1.5 text-xs font-medium text-sky-400 transition-colors hover:bg-sky-500/20"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 text-sky-400 text-xs font-medium rounded-lg transition-colors"
               >
-                <Bird className="h-3 w-3" />
+                <Bird className="w-3 h-3" />
                 Post to X
               </a>
             </div>
           </div>
 
-          {/* Feature 5: Polished progress card */}
+          {/* Visual Progress Card */}
           <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-zinc-400">
-                Progress Card
-              </h3>
-              <span className="rounded border border-zinc-700 px-1.5 py-0.5 text-[10px] text-zinc-500">
-                Screenshot &amp; share
-              </span>
-            </div>
+            <h3 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider">
+              Progress Card
+            </h3>
+            <p className="text-xs text-zinc-600">Screenshot this and share it anywhere.</p>
             <VisualProgressCard card={cardData} />
           </div>
         </div>
       )}
-
-      {/* Bottom spacer for mobile nav */}
-      <div className="h-4 md:hidden" />
     </div>
   )
 }

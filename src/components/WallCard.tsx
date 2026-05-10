@@ -50,7 +50,7 @@ export default function WallCard({ post }: { post: WallPost }) {
   })()
 
   return (
-    <div className="group space-y-4 rounded-lg border border-zinc-800 bg-zinc-900 p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-zinc-700 hover:shadow-xl hover:shadow-black/20">
+    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 space-y-4 hover:border-zinc-700 transition-colors group">
       {/* Header — avatar + name + tweet link */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">

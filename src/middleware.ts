@@ -1,15 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-const DEMO_COOKIE = 'devstreak_demo'
-const envDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true'
-
 export async function middleware(request: NextRequest) {
-  const cookieDemoMode = request.cookies.get(DEMO_COOKIE)?.value === 'true'
-  if (envDemoMode || cookieDemoMode) {
-    return NextResponse.next({ request })
-  }
-
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(

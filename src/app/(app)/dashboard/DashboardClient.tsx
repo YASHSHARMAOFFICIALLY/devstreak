@@ -6,6 +6,7 @@ import GoalCard from '@/components/GoalCard'
 import StreakBadge from '@/components/StreakBadge'
 import StreakHeatmap from '@/components/StreakHeatmap'
 import AchievementBadges from '@/components/AchievementBadges'
+import GitHubActivityCard from '@/components/GitHubActivityCard'
 import {
   Brain,
   Plus,
@@ -118,19 +119,19 @@ function StatusBanner({
 
   if (doneCount === total) {
     message = streak > 6
-      ? `🏆 Full streak — ${streak} days straight. Legendary.`
-      : '✅ All done for today. Come back tomorrow.'
+      ? `Full completion: ${streak} active days in a row.`
+      : 'All goals completed for today.'
     color = 'border-green-500/30 bg-green-500/5 text-green-400'
   } else if (doneCount === 0) {
     message = mode === 'roast'
-      ? '😤 Nothing logged yet. You\'re not that busy.'
-      : '💡 Day\'s still young — get at least one done.'
+      ? 'No progress logged yet. Start with one visible action.'
+      : 'No progress logged yet. Complete one small task to start momentum.'
     color = 'border-zinc-700 bg-zinc-900/60 text-zinc-400'
   } else {
     const remaining = total - doneCount
     message = mode === 'roast'
-      ? `🔥 ${doneCount}/${total} done — ${remaining} more excuses to go.`
-      : `⚡ ${doneCount}/${total} done — ${remaining} left. Keep the momentum.`
+      ? `${doneCount}/${total} complete. ${remaining} task${remaining === 1 ? '' : 's'} still need proof.`
+      : `${doneCount}/${total} complete. ${remaining} task${remaining === 1 ? '' : 's'} left.`
     color = 'border-amber-500/20 bg-amber-500/5 text-amber-300'
   }
 
@@ -510,7 +511,7 @@ export default function DashboardClient({
       <div className="rounded-xl border border-zinc-800 bg-zinc-900/70 p-5 shadow-2xl shadow-black/20">
         <p className="text-sm font-medium text-amber-300">{displayDate}</p>
         <h1 className="mt-1 text-2xl font-bold text-zinc-100 sm:text-3xl">
-          Hey, {displayName} 👋
+          Hey, {displayName}
         </h1>
         <p className="mt-2 text-sm text-zinc-500">
           Mark what moved today, then generate a review when you are done.
@@ -541,13 +542,15 @@ export default function DashboardClient({
       {/* Feature 1: Today status banner */}
       <StatusBanner doneCount={doneCount} total={total} streak={streak} mode={mode} />
 
+      <GitHubActivityCard />
+
       {/* Progress bar */}
       {total > 0 && (
         <div className="space-y-2">
           <div className="flex justify-between items-center text-xs text-zinc-500">
             <span>Today&apos;s progress</span>
             <span className={doneCount === total ? 'text-green-400 font-semibold' : ''}>
-              {progressPct}%{doneCount === total ? ' — All done! 🔥' : ''}
+              {progressPct}%{doneCount === total ? ' — Complete' : ''}
             </span>
           </div>
           <div className="h-2.5 overflow-hidden rounded-full bg-zinc-800 ring-1 ring-zinc-700/50">
@@ -656,8 +659,8 @@ export default function DashboardClient({
           <div className="space-y-4 rounded-lg border border-zinc-800 bg-zinc-900 p-5">
             <p className="text-sm text-zinc-400">
               {mode === 'roast'
-                ? 'Ready to get called out for your slacking?'
-                : 'Get a personalized pep talk based on your day.'}
+                ? "Generate a direct review based on today's actual progress."
+                : "Generate a focused review based on today's actual progress."}
             </p>
             {reviewError && (
               <p className="text-xs text-red-400 flex items-center gap-1">

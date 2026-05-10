@@ -1,6 +1,12 @@
 import { formatDateKey, lastSevenDateKeys, todayDateKey } from './date'
+import { cookies } from 'next/headers'
 
-export const demoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true'
+export const DEMO_COOKIE = 'devstreak_demo'
+export const envDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true'
+
+export function isDemoMode() {
+  return envDemoMode || cookies().get(DEMO_COOKIE)?.value === 'true'
+}
 
 type Category = 'code' | 'fitness' | 'learning' | 'oss' | 'other'
 type Status = 'done' | 'skip' | 'pending'

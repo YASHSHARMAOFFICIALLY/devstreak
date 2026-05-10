@@ -101,6 +101,35 @@ function buildStats(dayStats: DayStat[], goals: Goal[], logs: Log[]) {
   return { totalCompleted, avgFocus, bestDay, mostSkipped }
 }
 
+function buildBurnoutRadar(dayStats: DayStat[]) {
+  const skipped = dayStats.reduce((sum, day) => sum + day.skipped, 0)
+  const lowFocusDays = dayStats.filter((day) => day.focusScore > 0 && day.focusScore < 5).length
+  const flaggedDays = dayStats.filter((day) => day.review?.burnout_flag).length
+  const activeDays = dayStats.filter((day) => day.total > 0).length
+  const skipRate =
+    activeDays === 0
+      ? 0
+      : skipped / Math.max(1, dayStats.reduce((sum, day) => sum + day.total, 0))
+
+  const score = Math.min(100, Math.round(flaggedDays * 35 + lowFocusDays * 18 + skipRate * 100))
+  const level = score >= 65 ? 'High' : score >= 35 ? 'Medium' : 'Low'
+  const tone =
+    level === 'High'
+      ? 'border-red-500/30 bg-red-500/10 text-red-300'
+      : level === 'Medium'
+      ? 'border-amber-500/30 bg-amber-500/10 text-amber-300'
+      : 'border-green-500/30 bg-green-500/10 text-green-300'
+
+  const recommendation =
+    level === 'High'
+      ? 'Reduce tomorrow to one critical goal and one recovery action.'
+      : level === 'Medium'
+      ? 'Move the most skipped goal earlier in the day and cap the work session.'
+      : 'Current pace looks sustainable. Keep the scope tight and repeatable.'
+
+  return { skipped, lowFocusDays, flaggedDays, score, level, tone, recommendation }
+}
+
 export default function WeeklyReviewClient({
   userId,
   days,
@@ -116,6 +145,7 @@ export default function WeeklyReviewClient({
 }) {
   const dayStats = buildDayStats(days, logs, reviews, goals)
   const { totalCompleted, avgFocus, bestDay, mostSkipped } = buildStats(dayStats, goals, logs)
+  const burnoutRadar = buildBurnoutRadar(dayStats)
 
   const [summary, setSummary] = useState<string | null>(null)
   const [generating, setGenerating] = useState(false)
@@ -201,6 +231,44 @@ export default function WeeklyReviewClient({
           <p className="text-3xl font-black tabular-nums text-purple-400">{avgFocus.toFixed(1)}</p>
           <p className="text-xs text-zinc-600">out of 10</p>
         </div>
+      </div>
+
+      {/* Burnout radar */}
+      <div className="space-y-4 rounded-lg border border-zinc-800 bg-zinc-900 p-5 shadow-sm">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-zinc-400">
+              <AlertTriangle className="h-4 w-4 text-amber-400" />
+              Burnout Radar
+            </h2>
+            <p className="mt-1 text-sm leading-relaxed text-zinc-500">
+              Converts skipped goals, low-focus days, and AI burnout flags into one weekly risk signal.
+            </p>
+          </div>
+          <div className={clsx('rounded-lg border px-3 py-2 text-right', burnoutRadar.tone)}>
+            <p className="text-xs uppercase tracking-wider opacity-80">Risk</p>
+            <p className="text-2xl font-black">{burnoutRadar.level}</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-3 gap-2">
+          <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-3">
+            <p className="text-xl font-black tabular-nums text-zinc-100">{burnoutRadar.skipped}</p>
+            <p className="text-xs text-zinc-600">skips</p>
+          </div>
+          <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-3">
+            <p className="text-xl font-black tabular-nums text-zinc-100">{burnoutRadar.lowFocusDays}</p>
+            <p className="text-xs text-zinc-600">low-focus days</p>
+          </div>
+          <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-3">
+            <p className="text-xl font-black tabular-nums text-zinc-100">{burnoutRadar.flaggedDays}</p>
+            <p className="text-xs text-zinc-600">AI flags</p>
+          </div>
+        </div>
+
+        <p className="rounded-lg border border-zinc-800 bg-zinc-950/50 px-3 py-2.5 text-sm text-zinc-300">
+          {burnoutRadar.recommendation}
+        </p>
       </div>
 
       {/* Focus chart */}

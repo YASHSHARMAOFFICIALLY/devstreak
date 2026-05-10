@@ -2,9 +2,11 @@ import { createClient } from '@/lib/supabase/server'
 import { todayDateKey } from '@/lib/date'
 import { redirect } from 'next/navigation'
 import DashboardClient from './DashboardClient'
-import { demoDoneLogs, demoGoals, demoMode, demoReviews, demoTodayLogs, demoUser } from '@/lib/demo'
+import { demoDoneLogs, demoGoals, demoReviews, demoTodayLogs, demoUser, isDemoMode } from '@/lib/demo'
 
 export default async function DashboardPage() {
+  const demoMode = isDemoMode()
+
   if (demoMode) {
     const today = todayDateKey()
     const displayDate = new Date().toLocaleDateString('en-US', {

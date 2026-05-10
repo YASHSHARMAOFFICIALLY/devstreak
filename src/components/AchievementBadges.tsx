@@ -22,33 +22,33 @@ function buildBadges({ streak, totalDone, doneToday, totalGoals }: Props): Badge
   return [
     {
       id: 'first_done',
-      label: 'First Blood',
+      label: 'First Goal',
       description: 'Complete your first goal',
-      icon: '🎯',
+      icon: '01',
       unlocked: totalDone >= 1,
       rarity: 'common',
     },
     {
       id: 'streak_3',
-      label: 'On Fire',
+      label: '3-Day Run',
       description: '3-day streak',
-      icon: '🔥',
+      icon: '03',
       unlocked: streak >= 3,
       rarity: 'common',
     },
     {
       id: 'streak_7',
-      label: 'Week Warrior',
+      label: 'Consistent Week',
       description: '7-day streak',
-      icon: '⚡',
+      icon: '07',
       unlocked: streak >= 7,
       rarity: 'rare',
     },
     {
       id: 'streak_30',
-      label: 'Month Legend',
+      label: '30-Day System',
       description: '30-day streak',
-      icon: '💎',
+      icon: '30',
       unlocked: streak >= 30,
       rarity: 'epic',
     },
@@ -56,15 +56,15 @@ function buildBadges({ streak, totalDone, doneToday, totalGoals }: Props): Badge
       id: 'perfect_day',
       label: 'Perfect Day',
       description: 'Complete all goals in a day',
-      icon: '✅',
+      icon: 'OK',
       unlocked: totalGoals > 0 && doneToday === totalGoals,
       rarity: 'rare',
     },
     {
       id: 'grinder',
-      label: 'Grinder',
+      label: '50 Goals',
       description: 'Complete 50 total goals',
-      icon: '🏆',
+      icon: '50',
       unlocked: totalDone >= 50,
       rarity: 'epic',
     },
@@ -104,7 +104,9 @@ export default function AchievementBadges({ streak, totalDone, doneToday, totalG
               badge.unlocked ? rarityStyles[badge.rarity] : rarityLocked
             )}
           >
-            <span className="text-xl leading-none">{badge.icon}</span>
+            <span className="text-sm font-black leading-none tracking-normal text-zinc-100">
+              {badge.icon}
+            </span>
             <p className="text-[10px] font-semibold leading-tight text-zinc-300">{badge.label}</p>
           </div>
         ))}

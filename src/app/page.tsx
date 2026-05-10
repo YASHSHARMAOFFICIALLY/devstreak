@@ -1,15 +1,16 @@
 import { createClient } from '@/lib/supabase/server'
 import SignInButton from '@/components/SignInButton'
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import { Flame, Target, Brain } from 'lucide-react'
-import { demoMode } from '@/lib/demo'
+import { isDemoMode } from '@/lib/demo'
 
 export default async function LandingPage({
   searchParams,
 }: {
   searchParams: { error?: string }
 }) {
-  if (demoMode) redirect('/dashboard')
+  if (isDemoMode()) redirect('/dashboard')
 
   const supabase = createClient()
   const {
@@ -37,15 +38,15 @@ export default async function LandingPage({
         {/* Headline */}
         <div className="space-y-3">
           <h1 className="text-4xl font-black leading-tight text-zinc-100 sm:text-5xl">
-            Track goals.
+            Track proof.
             <br />
-            <span className="text-amber-300">Get roasted.</span>
+            <span className="text-amber-300">Review daily.</span>
             <br />
-            Stay consistent.
+            Ship consistently.
           </h1>
           <p className="mx-auto max-w-md text-base leading-7 text-zinc-400">
-            Daily goal tracking for developers — with AI that either roasts your
-            laziness or hypes your grind.
+            Developer accountability powered by daily goals, GitHub-native progress,
+            AI reflection, and public proof-of-work.
           </p>
         </div>
 
@@ -66,7 +67,15 @@ export default async function LandingPage({
         </div>
 
         {/* CTA */}
-        <SignInButton />
+        <div className="space-y-3">
+          <SignInButton />
+          <Link
+            href="/demo"
+            className="flex w-full items-center justify-center rounded-lg border border-zinc-800 bg-zinc-900/80 px-6 py-3 text-sm font-semibold text-zinc-200 transition-colors hover:border-amber-400/30 hover:bg-zinc-800"
+          >
+            View live demo
+          </Link>
+        </div>
 
         {searchParams.error && (
           <p className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-300">
@@ -75,7 +84,7 @@ export default async function LandingPage({
         )}
 
         <p className="text-zinc-600 text-xs">
-          No email. No password. Just GitHub.
+          Built for builders who want visible progress, not private TODO lists.
         </p>
       </div>
     </div>

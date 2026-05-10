@@ -3,13 +3,15 @@ import { redirect } from 'next/navigation'
 import ReviewCard from '@/components/ReviewCard'
 import GenerateReviewButton from './GenerateReviewButton'
 import { CheckCircle2, SkipForward, Clock } from 'lucide-react'
-import { demoDailyLogs, demoMode, demoReviews, demoUser } from '@/lib/demo'
+import { demoDailyLogs, demoReviews, demoUser, isDemoMode } from '@/lib/demo'
 
 export default async function ReviewPage({
   params,
 }: {
   params: { date: string }
 }) {
+  const demoMode = isDemoMode()
+
   if (demoMode) {
     const { date } = params
     const review = demoReviews().find((item) => item.date === date) ?? demoReviews().at(-1) ?? null

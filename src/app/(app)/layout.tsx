@@ -1,13 +1,15 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Sidebar from '@/components/Sidebar'
-import { demoMode, demoUser } from '@/lib/demo'
+import { demoUser, isDemoMode } from '@/lib/demo'
 
 export default async function AppLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const demoMode = isDemoMode()
+
   if (demoMode) {
     return (
       <div className="flex min-h-screen flex-col bg-zinc-950 md:flex-row">

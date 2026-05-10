@@ -31,7 +31,7 @@ export default function Sidebar({
 
   async function handleSignOut() {
     if (demoMode) {
-      router.push('/dashboard')
+      router.push('/demo/exit')
       return
     }
 
@@ -107,9 +107,12 @@ export default function Sidebar({
           </span>
         </div>
         {demoMode ? (
-          <div className="rounded-lg border border-amber-400/20 bg-amber-400/10 px-3 py-2 text-xs font-medium text-amber-300">
-            Demo data
-          </div>
+          <button
+            onClick={handleSignOut}
+            className="w-full rounded-lg border border-amber-400/20 bg-amber-400/10 px-3 py-2 text-left text-xs font-medium text-amber-300 transition-colors hover:bg-amber-400/15"
+          >
+            Exit demo
+          </button>
         ) : (
           <button
             onClick={handleSignOut}

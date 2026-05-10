@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import WallCard from '@/components/WallCard'
 import { Flame, Users } from 'lucide-react'
-import { demoMode, demoWallPosts } from '@/lib/demo'
+import { demoWallPosts, isDemoMode } from '@/lib/demo'
 
 export const revalidate = 60 // ISR — refresh every 60s
 
@@ -34,6 +34,8 @@ type WallPost = {
 }
 
 export default async function WallPage() {
+  const demoMode = isDemoMode()
+
   if (demoMode) {
     return <Wall posts={demoWallPosts()} userSignedIn />
   }

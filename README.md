@@ -1,10 +1,18 @@
 # DevStreak
 
-DevStreak is a developer-focused accountability dashboard for tracking daily goals, building streaks, and reviewing progress with AI-generated feedback. The application combines habit tracking, public progress sharing, and weekly reflection into a single workflow designed for developers who want to stay consistent.
+DevStreak is a developer-focused accountability dashboard for tracking daily goals, building streaks, reviewing progress with AI, and turning GitHub activity into visible proof-of-work. The application combines habit tracking, public progress sharing, and weekly reflection into a single workflow designed for developers who want to stay consistent.
 
 ## Overview
 
-DevStreak helps users define daily development goals, mark progress, generate nightly AI reviews, and share selected wins to a public wall. It uses Supabase for authentication and persistence, and Anthropic for AI review generation.
+DevStreak helps users define daily development goals, mark progress, review public GitHub activity, generate nightly AI reviews, and share selected wins to a public wall. It uses Supabase for authentication and persistence, Anthropic for AI review generation, and GitHub public events for developer activity signals.
+
+## Problem
+
+Developers often start projects with momentum but lose consistency because their goals, actual coding activity, and reflection live in separate places. Generic habit trackers do not understand developer output, and GitHub alone does not explain whether the work matched the user's intended goals.
+
+## Solution
+
+DevStreak connects daily intent with visible proof-of-work. It gives builders a daily operating loop: define the work, check real progress, review the day with AI, detect burnout risk, and share selected wins publicly.
 
 The product is built around a simple loop:
 
@@ -12,12 +20,14 @@ The product is built around a simple loop:
 2. Create daily development goals.
 3. Mark goals as done, skipped, or pending.
 4. Generate a daily review with focus score and burnout signal.
-5. Review weekly progress and share completed work publicly.
+5. Compare progress against GitHub activity.
+6. Review weekly progress and share completed work publicly.
 
 ## Features
 
 - GitHub OAuth authentication through Supabase
 - Daily goal tracking with status updates
+- Public GitHub activity signals on the dashboard
 - Developer streak calculation
 - 30-day activity heatmap
 - Achievement badges based on consistency and completed work
@@ -54,6 +64,7 @@ src/
       wall/            Public progress wall
     api/
       auth/github/     GitHub OAuth start route
+      github/activity/ Public GitHub activity signal endpoint
       generate-review/ Daily AI review generation
       review/          Review persistence endpoint
       wall/            Public wall sharing endpoint
@@ -77,13 +88,14 @@ src/
 
 ## Environment Variables
 
-Create a `.env.local` file in the project root:
+Copy `.env.example` to `.env.local` and fill in the required values:
 
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 ANTHROPIC_API_KEY=
 NEXT_PUBLIC_APP_TIME_ZONE=Asia/Kolkata
+NEXT_PUBLIC_DEMO_MODE=false
 ```
 
 | Variable | Required | Description |
@@ -92,6 +104,17 @@ NEXT_PUBLIC_APP_TIME_ZONE=Asia/Kolkata
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Supabase anonymous public key |
 | `ANTHROPIC_API_KEY` | Yes | API key used for daily and weekly AI reviews |
 | `NEXT_PUBLIC_APP_TIME_ZONE` | No | App date timezone. Defaults to `Asia/Kolkata` |
+| `NEXT_PUBLIC_DEMO_MODE` | No | Enables seeded demo mode for the whole deployment when set to `true` |
+
+## Demo Mode
+
+Judges can open a seeded demo without creating an account:
+
+```text
+/demo
+```
+
+This route sets a short-lived demo cookie and redirects to the dashboard with realistic goals, logs, AI reviews, GitHub activity, and wall posts. The normal authenticated product remains available unless `NEXT_PUBLIC_DEMO_MODE=true` is set.
 
 ## Database Tables
 
@@ -158,6 +181,10 @@ The generated review includes:
 
 Weekly summaries use the last seven days of goals, logs, and reviews to generate a concise progress analysis.
 
+## GitHub Activity Flow
+
+DevStreak reads the authenticated user's stored GitHub username and loads recent public GitHub events from the GitHub public events API. Pushes, pull requests, and issue activity are summarized into dashboard signals that help users connect stated goals with actual developer output.
+
 ## Deployment
 
 The app can be deployed to Vercel or any platform that supports Next.js.
@@ -167,7 +194,8 @@ Before deploying:
 1. Add all environment variables to the hosting provider.
 2. Configure Supabase Auth redirect URLs for the production domain.
 3. Confirm Supabase row-level security policies are enabled.
-4. Run a production build locally:
+4. Confirm `/demo` works for judging and fallback demos.
+5. Run a production build locally:
 
 ```bash
 npm run build

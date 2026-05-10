@@ -1,9 +1,11 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import GoalsClient from './GoalsClient'
-import { demoDoneLogs, demoGoals, demoMode, demoUser } from '@/lib/demo'
+import { demoDoneLogs, demoGoals, demoUser, isDemoMode } from '@/lib/demo'
 
 export default async function GoalsPage() {
+  const demoMode = isDemoMode()
+
   if (demoMode) {
     return (
       <div className="max-w-3xl mx-auto space-y-8">

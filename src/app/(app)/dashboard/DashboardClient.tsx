@@ -307,6 +307,7 @@ export default function DashboardClient({
   today,
   displayDate,
   existingReview,
+  demoMode = false,
 }: {
   userId: string
   goals: Goal[]
@@ -318,8 +319,9 @@ export default function DashboardClient({
   today: string
   displayDate: string
   existingReview?: Review | null
+  demoMode?: boolean
 }) {
-  const supabase = createClient()
+  const supabase = demoMode ? null : createClient()
 
   const buildStatusMap = (logs: Log[]) => {
     const map = new Map<string, { logId: string; status: Status }>()
@@ -379,17 +381,32 @@ export default function DashboardClient({
       const newStreak = calculateStreak(newDoneLogs)
       setStreak(newStreak)
 
-      await supabase
+      if (demoMode) return
+
+      await supabase!
         .from('users')
         .update({ streak_count: newStreak })
         .eq('id', userId)
     },
-    [doneLogs, statusMap, today, supabase, userId]
+    [demoMode, doneLogs, statusMap, today, supabase, userId]
   )
 
   const generateReview = useCallback(async () => {
     setGenerating(true)
     setReviewError(null)
+    if (demoMode) {
+      setReview({
+        id: 'demo-review-regenerated',
+        content:
+          '[FOCUS] You kept momentum across product, learning, and health.\n\n[REVIEW] Three goals are complete. The unfinished OSS review is the one task still trying to sneak out the side door.\n\n[TOMORROW] Open the issue queue first, then code.\n\n[BURNOUT] No major burnout signal, but stop work at a sane hour.',
+        burnout_flag: false,
+        focus_score: 8.8,
+        date: today,
+      })
+      setGenerating(false)
+      return
+    }
+
     try {
       const res = await fetch('/api/generate-review', {
         method: 'POST',
@@ -407,12 +424,32 @@ export default function DashboardClient({
     } finally {
       setGenerating(false)
     }
-  }, [today])
+  }, [demoMode, today])
 
   const shareToWall = useCallback(
     async (goalId: string) => {
       setSharing(true)
       setShareError(null)
+      if (demoMode) {
+        const goal = goals.find((g) => g.id === goalId)
+        setSharedGoalId(goalId)
+        setTweetDraft(
+          `Day ${streak} on DevStreak: completed ${doneCount}/${total} goals and shipped "${goal?.title ?? "today's focus"}".`
+        )
+        setCardData({
+          name: displayName,
+          username: 'yashcodes',
+          streak,
+          goal: goal?.title ?? null,
+          focusScore: review?.focus_score ?? 8.6,
+          goalsDone: doneCount,
+          date: today,
+          avatar_url: null,
+        })
+        setSharing(false)
+        return
+      }
+
       try {
         const res = await fetch('/api/wall', {
           method: 'POST',
@@ -433,7 +470,7 @@ export default function DashboardClient({
         setSharing(false)
       }
     },
-    []
+    [demoMode, displayName, doneCount, goals, review?.focus_score, streak, today, total]
   )
 
   const copyTweet = useCallback(() => {
@@ -447,14 +484,19 @@ export default function DashboardClient({
   const quickAddGoal = useCallback(
     async (title: string, category: Category) => {
       setQuickAdding(title)
-      await supabase
+      if (demoMode) {
+        setQuickAdding(null)
+        return
+      }
+
+      await supabase!
         .from('goals')
         .insert({ user_id: userId, title, category, is_active: true })
       // Page will re-fetch on next load; notify user
       setQuickAdding(null)
       window.location.reload()
     },
-    [supabase, userId]
+    [demoMode, supabase, userId]
   )
 
   const buttonLabel = mode === 'roast' ? 'Roast me tonight' : 'Hype me up'
@@ -572,6 +614,7 @@ export default function DashboardClient({
                   initialStatus={logEntry?.status ?? 'pending'}
                   date={today}
                   onStatusChange={handleStatusChange}
+                  demoMode={demoMode}
                 />
               )
             })}

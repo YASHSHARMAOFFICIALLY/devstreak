@@ -86,10 +86,12 @@ export default function GoalsClient({
   initialGoals,
   doneLogs: initialDoneLogs,
   userId,
+  demoMode = false,
 }: {
   initialGoals: Goal[]
   doneLogs: DoneLog[]
   userId: string
+  demoMode?: boolean
 }) {
   const [goals, setGoals] = useState<Goal[]>(initialGoals)
   const [doneLogs] = useState<DoneLog[]>(initialDoneLogs)
@@ -98,11 +100,13 @@ export default function GoalsClient({
   const [category, setCategory] = useState<Category>('code')
   const [adding, setAdding] = useState(false)
   const [showPaused, setShowPaused] = useState(false)
-  const supabase = createClient()
+  const supabase = demoMode ? null : createClient()
 
   // Realtime subscription
   useEffect(() => {
-    const channel = supabase
+    if (demoMode) return
+
+    const channel = supabase!
       .channel('goals-realtime')
       .on(
         'postgres_changes',
@@ -132,14 +136,32 @@ export default function GoalsClient({
       .subscribe()
 
     return () => {
-      supabase.removeChannel(channel)
+      supabase!.removeChannel(channel)
     }
-  }, [supabase, userId])
+  }, [demoMode, supabase, userId])
 
   const addGoal = useCallback(async () => {
     if (!title.trim() || adding) return
     setAdding(true)
-    const { error } = await supabase
+    if (demoMode) {
+      setGoals((prev) => [
+        {
+          id: `demo-goal-${Date.now()}`,
+          title: title.trim(),
+          category,
+          is_active: true,
+          created_at: new Date().toISOString(),
+          user_id: userId,
+        },
+        ...prev,
+      ])
+      setTitle('')
+      setShowForm(false)
+      setAdding(false)
+      return
+    }
+
+    const { error } = await supabase!
       .from('goals')
       .insert({ user_id: userId, title: title.trim(), category, is_active: true })
 
@@ -148,17 +170,29 @@ export default function GoalsClient({
       setShowForm(false)
     }
     setAdding(false)
-  }, [title, category, adding, supabase, userId])
+  }, [title, category, adding, demoMode, supabase, userId])
 
   async function toggleActive(goal: Goal) {
-    await supabase
+    if (demoMode) {
+      setGoals((prev) =>
+        prev.map((g) => (g.id === goal.id ? { ...g, is_active: !g.is_active } : g))
+      )
+      return
+    }
+
+    await supabase!
       .from('goals')
       .update({ is_active: !goal.is_active })
       .eq('id', goal.id)
   }
 
   async function deleteGoal(id: string) {
-    await supabase.from('goals').delete().eq('id', id)
+    if (demoMode) {
+      setGoals((prev) => prev.filter((goal) => goal.id !== id))
+      return
+    }
+
+    await supabase!.from('goals').delete().eq('id', id)
   }
 
   const active = goals.filter((g) => g.is_active)

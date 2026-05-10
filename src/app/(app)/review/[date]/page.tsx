@@ -3,12 +3,29 @@ import { redirect } from 'next/navigation'
 import ReviewCard from '@/components/ReviewCard'
 import GenerateReviewButton from './GenerateReviewButton'
 import { CheckCircle2, SkipForward, Clock } from 'lucide-react'
+import { demoDailyLogs, demoMode, demoReviews, demoUser } from '@/lib/demo'
 
 export default async function ReviewPage({
   params,
 }: {
   params: { date: string }
 }) {
+  if (demoMode) {
+    const { date } = params
+    const review = demoReviews().find((item) => item.date === date) ?? demoReviews().at(-1) ?? null
+    const logs = demoDailyLogs().filter((log) => log.date === date)
+
+    return (
+      <DailyReview
+        date={date}
+        logs={logs}
+        review={review}
+        userId={demoUser.id}
+        mode={demoUser.mode}
+      />
+    )
+  }
+
   const supabase = createClient()
   const {
     data: { user },
@@ -36,10 +53,44 @@ export default async function ReviewPage({
       .single(),
   ])
 
-  const done = (logs ?? []).filter((l) => l.status === 'done').length
-  const skipped = (logs ?? []).filter((l) => l.status === 'skip').length
-  const pending = (logs ?? []).filter((l) => l.status === 'pending').length
-  const total = (logs ?? []).length
+  return (
+    <DailyReview
+      date={date}
+      logs={logs ?? []}
+      review={review}
+      userId={user.id}
+      mode={profile?.mode ?? 'roast'}
+    />
+  )
+}
+
+function DailyReview({
+  date,
+  logs,
+  review,
+  userId,
+  mode,
+}: {
+  date: string
+  logs: {
+    id: string
+    status: 'done' | 'skip' | 'pending'
+    goals?: { title?: string | null } | null
+  }[]
+  review: {
+    id: string
+    content: string | null
+    burnout_flag: boolean | null
+    focus_score: number | null
+    date: string
+  } | null
+  userId: string
+  mode: string
+}) {
+  const done = logs.filter((l) => l.status === 'done').length
+  const skipped = logs.filter((l) => l.status === 'skip').length
+  const pending = logs.filter((l) => l.status === 'pending').length
+  const total = logs.length
 
   const displayDate = new Date(date + 'T12:00:00').toLocaleDateString('en-US', {
     weekday: 'long',
@@ -82,7 +133,7 @@ export default async function ReviewPage({
         {/* Log list */}
         {(logs ?? []).length > 0 && (
           <div className="space-y-2 pt-2 border-t border-zinc-800">
-            {(logs ?? []).map((log) => (
+            {logs.map((log) => (
               <div key={log.id} className="flex items-center justify-between text-sm">
                 <span className="text-zinc-300">
                   {(log.goals as { title?: string } | null)?.title ?? 'Unknown goal'}
@@ -120,9 +171,9 @@ export default async function ReviewPage({
           </p>
           {total > 0 && (
             <GenerateReviewButton
-              userId={user.id}
+              userId={userId}
               date={date}
-              mode={profile?.mode ?? 'roast'}
+              mode={mode}
               logsSummary={{ done, skipped, pending, total }}
             />
           )}

@@ -2,8 +2,24 @@ import { createClient } from '@/lib/supabase/server'
 import { lastSevenDateKeys, todayDateKey } from '@/lib/date'
 import { redirect } from 'next/navigation'
 import WeeklyReviewClient from './WeeklyReviewClient'
+import { demoDailyLogs, demoGoals, demoMode, demoReviews, demoUser } from '@/lib/demo'
 
 export default async function ReviewPage() {
+  if (demoMode) {
+    const todayStr = todayDateKey()
+    const days = lastSevenDateKeys(todayStr)
+
+    return (
+      <WeeklyReviewClient
+        userId={demoUser.id}
+        days={days}
+        logs={demoDailyLogs().map(({ id, goal_id, status, date }) => ({ id, goal_id, status, date }))}
+        reviews={demoReviews()}
+        goals={demoGoals.map(({ id, title }) => ({ id, title }))}
+      />
+    )
+  }
+
   const supabase = createClient()
   const {
     data: { user },

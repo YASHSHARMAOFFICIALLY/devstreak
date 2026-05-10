@@ -50,6 +50,7 @@ export default function GoalCard({
   initialStatus,
   date,
   onStatusChange,
+  demoMode = false,
 }: {
   logId?: string
   goalId: string
@@ -59,11 +60,12 @@ export default function GoalCard({
   initialStatus: Status
   date: string
   onStatusChange?: (goalId: string, status: Status, logId?: string) => void
+  demoMode?: boolean
 }) {
   const [status, setStatus] = useState<Status>(initialStatus)
   const [logId, setLogId] = useState<string | undefined>(initialLogId)
   const [loading, setLoading] = useState(false)
-  const supabase = createClient()
+  const supabase = demoMode ? null : createClient()
 
   async function updateStatus(newStatus: Status) {
     if (loading) return
@@ -74,14 +76,17 @@ export default function GoalCard({
     let savedLogId = logId
     let error: { message?: string } | null = null
 
-    if (logId) {
-      const result = await supabase
+    if (demoMode) {
+      savedLogId = logId ?? `demo-log-${goalId}-${date}`
+      if (!logId) setLogId(savedLogId)
+    } else if (logId) {
+      const result = await supabase!
         .from('daily_logs')
         .update({ status: newStatus })
         .eq('id', logId)
       error = result.error
     } else {
-      const { data, error: insertError } = await supabase
+      const { data, error: insertError } = await supabase!
         .from('daily_logs')
         .insert({ goal_id: goalId, user_id: userId, date, status: newStatus })
         .select('id')

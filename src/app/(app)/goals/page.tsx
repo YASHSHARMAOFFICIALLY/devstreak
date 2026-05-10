@@ -1,8 +1,28 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import GoalsClient from './GoalsClient'
+import { demoDoneLogs, demoGoals, demoMode, demoUser } from '@/lib/demo'
 
 export default async function GoalsPage() {
+  if (demoMode) {
+    return (
+      <div className="max-w-3xl mx-auto space-y-8">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-bold text-zinc-100">Goals</h1>
+          <p className="text-zinc-500 text-sm">
+            Track what matters. Show up daily.
+          </p>
+        </div>
+        <GoalsClient
+          initialGoals={demoGoals}
+          doneLogs={demoDoneLogs()}
+          userId={demoUser.id}
+          demoMode
+        />
+      </div>
+    )
+  }
+
   const supabase = createClient()
   const {
     data: { user },

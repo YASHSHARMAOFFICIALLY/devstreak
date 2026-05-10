@@ -20,14 +20,21 @@ const navItems = [
 export default function Sidebar({
   username,
   avatarUrl,
+  demoMode = false,
 }: {
   username?: string | null
   avatarUrl?: string | null
+  demoMode?: boolean
 }) {
   const pathname = usePathname()
   const router = useRouter()
 
   async function handleSignOut() {
+    if (demoMode) {
+      router.push('/dashboard')
+      return
+    }
+
     const supabase = createClient()
     await supabase.auth.signOut()
     router.push('/')
@@ -43,13 +50,15 @@ export default function Sidebar({
           </span>
           <span className="font-bold tracking-tight text-zinc-100">DevStreak</span>
         </div>
-        <button
-          onClick={handleSignOut}
-          className="grid h-8 w-8 place-items-center rounded-lg text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-red-400 md:hidden"
-          title="Sign out"
-        >
-          <LogOut className="h-4 w-4" />
-        </button>
+        {!demoMode && (
+          <button
+            onClick={handleSignOut}
+            className="grid h-8 w-8 place-items-center rounded-lg text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-red-400 md:hidden"
+            title="Sign out"
+          >
+            <LogOut className="h-4 w-4" />
+          </button>
+        )}
       </div>
 
       {/* Nav */}
@@ -97,13 +106,19 @@ export default function Sidebar({
             {username ?? 'Developer'}
           </span>
         </div>
-        <button
-          onClick={handleSignOut}
-          className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-zinc-500 hover:text-red-400 hover:bg-zinc-800 transition-colors w-full"
-        >
-          <LogOut className="w-4 h-4" />
-          Sign out
-        </button>
+        {demoMode ? (
+          <div className="rounded-lg border border-amber-400/20 bg-amber-400/10 px-3 py-2 text-xs font-medium text-amber-300">
+            Demo data
+          </div>
+        ) : (
+          <button
+            onClick={handleSignOut}
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-zinc-500 hover:text-red-400 hover:bg-zinc-800 transition-colors w-full"
+          >
+            <LogOut className="w-4 h-4" />
+            Sign out
+          </button>
+        )}
       </div>
     </aside>
   )

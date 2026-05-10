@@ -2,12 +2,15 @@ import { createClient } from '@/lib/supabase/server'
 import SignInButton from '@/components/SignInButton'
 import { redirect } from 'next/navigation'
 import { Flame, Target, Brain } from 'lucide-react'
+import { demoMode } from '@/lib/demo'
 
 export default async function LandingPage({
   searchParams,
 }: {
   searchParams: { error?: string }
 }) {
+  if (demoMode) redirect('/dashboard')
+
   const supabase = createClient()
   const {
     data: { user },

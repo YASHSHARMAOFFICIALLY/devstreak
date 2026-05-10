@@ -69,7 +69,7 @@ src/
 
 ## Requirements
 
-- Node.js 18.17 or newer
+- Node.js 20 or newer
 - npm
 - Supabase project
 - Anthropic API key

@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
+import SignInButton from '@/components/SignInButton'
 import { redirect } from 'next/navigation'
-import { Flame, Target, Brain, GitBranch } from 'lucide-react'
+import { Flame, Target, Brain } from 'lucide-react'
 
 export default async function LandingPage({
   searchParams,
@@ -62,9 +63,7 @@ export default async function LandingPage({
         </div>
 
         {/* CTA */}
-        <form action="/api/auth/github" method="GET">
-          <SignInButton />
-        </form>
+        <SignInButton />
 
         {searchParams.error && (
           <p className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-300">
@@ -77,17 +76,5 @@ export default async function LandingPage({
         </p>
       </div>
     </div>
-  )
-}
-
-function SignInButton() {
-  return (
-    <a
-      href="/api/auth/github"
-      className="flex w-full items-center justify-center gap-3 rounded-lg bg-zinc-100 px-6 py-3.5 font-semibold text-zinc-900 shadow-xl shadow-black/30 transition-all duration-150 hover:-translate-y-0.5 hover:bg-white focus:outline-none focus:ring-2 focus:ring-amber-300 focus:ring-offset-2 focus:ring-offset-zinc-950"
-    >
-      <GitBranch className="w-5 h-5" />
-      Sign in with GitHub
-    </a>
   )
 }

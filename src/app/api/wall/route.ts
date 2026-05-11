@@ -5,6 +5,53 @@ import Anthropic from '@anthropic-ai/sdk'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
+function firstRelation<T>(value: T | T[] | null | undefined): T | null {
+  return Array.isArray(value) ? value[0] ?? null : value ?? null
+}
+
+export async function GET() {
+  const supabase = createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const { data: posts, error } = await supabase
+    .from('wall_posts')
+    .select(`
+      id, goal_id, streak_count, tweet_draft, focus_score, created_at, is_public,
+      users ( github_username, display_name, avatar_url ),
+      goals ( title, category ),
+      ai_reviews ( content, focus_score )
+    `)
+    .eq('is_public', true)
+    .order('created_at', { ascending: false })
+    .limit(50)
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  return NextResponse.json(
+    {
+      posts: (posts ?? []).map((post) => ({
+        ...post,
+        users: firstRelation(post.users),
+        goals: firstRelation(post.goals),
+        ai_reviews: firstRelation(post.ai_reviews),
+      })),
+    },
+    {
+      headers: {
+        'Cache-Control': 'no-store',
+      },
+    }
+  )
+}
+
 export async function POST(request: Request) {
   const supabase = createClient()
   const {

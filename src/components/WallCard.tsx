@@ -1,7 +1,11 @@
-import { Flame, ExternalLink, Star } from 'lucide-react'
+'use client'
 
-type WallPost = {
+import { useMemo, useState } from 'react'
+import { Check, Copy, ExternalLink, Flame, Star } from 'lucide-react'
+
+export type WallPost = {
   id: string
+  goal_id?: string | null
   streak_count: number | null
   tweet_draft: string | null
   focus_score: number | null
@@ -23,15 +27,15 @@ type WallPost = {
 }
 
 export default function WallCard({ post }: { post: WallPost }) {
+  const [copied, setCopied] = useState(false)
   const user = post.users
   const goal = post.goals
   const streak = post.streak_count ?? 0
 
-  // AI review snippet — first sentence only
-  const reviewContent = post.ai_reviews?.content ?? null
-  const snippet = reviewContent
+  const reviewContent = post.ai_reviews?.content ?? post.review_snippet ?? null
+  const snippet = useMemo(() => reviewContent
     ? reviewContent.split(/[.!?]/)[0].trim() + '.'
-    : null
+    : null, [reviewContent])
 
   const focusScore = post.ai_reviews?.focus_score ?? post.focus_score ?? null
 
@@ -39,7 +43,7 @@ export default function WallCard({ post }: { post: WallPost }) {
     ? `https://twitter.com/intent/tweet?text=${encodeURIComponent(post.tweet_draft)}`
     : null
 
-  const relativeTime = (() => {
+  const relativeTime = useMemo(() => {
     const diff = Date.now() - new Date(post.created_at).getTime()
     const h = Math.floor(diff / 3_600_000)
     const d = Math.floor(diff / 86_400_000)
@@ -47,7 +51,15 @@ export default function WallCard({ post }: { post: WallPost }) {
     if (h < 24) return `${h}h ago`
     if (d < 7) return `${d}d ago`
     return new Date(post.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-  })()
+  }, [post.created_at])
+
+  async function copyTweet() {
+    if (!post.tweet_draft) return
+
+    await navigator.clipboard.writeText(post.tweet_draft)
+    setCopied(true)
+    window.setTimeout(() => setCopied(false), 1600)
+  }
 
   return (
     <div className="group space-y-4 rounded-lg border border-zinc-800 bg-zinc-900 p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-zinc-700 hover:shadow-xl hover:shadow-black/20">
@@ -78,13 +90,23 @@ export default function WallCard({ post }: { post: WallPost }) {
 
         <div className="flex items-center gap-2">
           <span className="text-xs text-zinc-600">{relativeTime}</span>
+          {post.tweet_draft && (
+            <button
+              type="button"
+              onClick={copyTweet}
+              className="text-zinc-600 opacity-100 transition-colors hover:text-zinc-300 sm:opacity-0 sm:group-hover:opacity-100"
+              title="Copy tweet draft"
+            >
+              {copied ? <Check className="h-3.5 w-3.5 text-green-400" /> : <Copy className="h-3.5 w-3.5" />}
+            </button>
+          )}
           {tweetUrl && (
             <a
               href={tweetUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-zinc-600 hover:text-sky-400 transition-colors opacity-0 group-hover:opacity-100"
-              title="Tweet this"
+              className="text-zinc-600 opacity-100 transition-colors hover:text-sky-400 sm:opacity-0 sm:group-hover:opacity-100"
+              title="Open tweet composer"
             >
               <ExternalLink className="w-3.5 h-3.5" />
             </a>
@@ -95,8 +117,15 @@ export default function WallCard({ post }: { post: WallPost }) {
       {/* Goal title */}
       {goal?.title && (
         <div>
-          <p className="text-xs text-zinc-500 uppercase tracking-wider mb-1">Goal</p>
-          <p className="text-sm text-zinc-200 font-medium leading-snug">{goal.title}</p>
+          <div className="mb-1 flex items-center gap-2">
+            <p className="text-xs uppercase tracking-wider text-zinc-500">Goal</p>
+            {goal.category && (
+              <span className="rounded border border-zinc-800 px-1.5 py-0.5 text-[10px] uppercase text-zinc-500">
+                {goal.category}
+              </span>
+            )}
+          </div>
+          <p className="text-sm font-medium leading-snug text-zinc-200">{goal.title}</p>
         </div>
       )}
 

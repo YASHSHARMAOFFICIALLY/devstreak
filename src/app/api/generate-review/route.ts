@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { addDaysToDateKey } from '@/lib/date'
 import { NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 
@@ -23,40 +24,36 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const { user_id, date } = await request.json()
+  const { date } = await request.json()
 
-  if (!date) {
+  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
     return NextResponse.json({ error: 'Missing date' }, { status: 400 })
   }
 
-  const targetUserId = user_id ?? user.id
-
   // Parallel Supabase queries
-  const sevenDaysAgo = new Date(date)
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6)
-  const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0]
+  const sevenDaysAgoStr = addDaysToDateKey(date, -6)
 
   const [goalsRes, todayLogsRes, weekLogsRes, userRes] = await Promise.all([
     supabase
       .from('goals')
       .select('id, title, category')
-      .eq('user_id', targetUserId)
+      .eq('user_id', user.id)
       .eq('is_active', true),
     supabase
       .from('daily_logs')
       .select('goal_id, status, skip_reason, notes')
-      .eq('user_id', targetUserId)
+      .eq('user_id', user.id)
       .eq('date', date),
     supabase
       .from('daily_logs')
       .select('goal_id, status, date')
-      .eq('user_id', targetUserId)
+      .eq('user_id', user.id)
       .gte('date', sevenDaysAgoStr)
       .lte('date', date),
     supabase
       .from('users')
       .select('mode, streak_count')
-      .eq('id', targetUserId)
+      .eq('id', user.id)
       .single(),
   ])
 
@@ -165,7 +162,7 @@ Write a nightly review. If mode is "roast", be sharp and call out excuses withou
     .from('ai_reviews')
     .upsert(
       {
-        user_id: targetUserId,
+        user_id: user.id,
         date,
         content,
         burnout_flag: burnoutFlag,

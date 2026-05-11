@@ -29,7 +29,7 @@ export default async function WallPage() {
   })).size
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8">
+    <div className="mx-auto max-w-5xl space-y-8">
       {/* Header */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
@@ -62,7 +62,7 @@ export default async function WallPage() {
 
         {/* CTA to share */}
         {user && (
-          <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center justify-between rounded-lg border border-amber-500/20 bg-amber-500/10 px-4 py-3">
             <p className="text-sm text-amber-300">
               Complete your goals today and share your streak to the wall.
             </p>

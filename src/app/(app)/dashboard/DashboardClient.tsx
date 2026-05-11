@@ -18,6 +18,7 @@ import {
   Bird,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { formatDateKey } from '@/lib/date'
 
 type Status = 'done' | 'skip' | 'pending'
 type Category = 'code' | 'fitness' | 'learning' | 'oss' | 'other'
@@ -67,7 +68,7 @@ function calculateStreak(doneLogs: DoneLog[]): number {
   for (let i = 0; i < 365; i++) {
     const d = new Date(today)
     d.setDate(d.getDate() - i)
-    const dateStr = d.toISOString().split('T')[0]
+    const dateStr = formatDateKey(d)
 
     if (doneDates.has(dateStr)) {
       streak++
@@ -201,26 +202,27 @@ export default function DashboardClient({
   const progressPct = total === 0 ? 0 : Math.round((doneCount / total) * 100)
 
   const handleStatusChange = useCallback(
-    async (goalId: string, newStatus: Status) => {
+    async (goalId: string, newStatus: Status, logId?: string) => {
+      const nextStatusMap = new Map(statusMap)
+      const existing = nextStatusMap.get(goalId)
+      nextStatusMap.set(goalId, {
+        logId: logId ?? existing?.logId ?? '',
+        status: newStatus,
+      })
+
       setStatusMap((prev) => {
         const next = new Map(prev)
-        const existing = next.get(goalId)
-        if (existing) {
-          next.set(goalId, { ...existing, status: newStatus })
-        }
+        next.set(goalId, {
+          logId: logId ?? existing?.logId ?? '',
+          status: newStatus,
+        })
         return next
       })
 
       const updatedDoneLogs = doneLogs.filter((l) => l.date !== today)
-      const todayDone = Array.from(statusMap.values())
-        .map((v, idx) => {
-          const gId = Array.from(statusMap.keys())[idx]
-          const effectiveStatus = gId === goalId ? newStatus : v.status
-          return effectiveStatus === 'done' ? { date: today } : null
-        })
-        .filter(Boolean) as DoneLog[]
+      const hasDoneToday = Array.from(nextStatusMap.values()).some((v) => v.status === 'done')
 
-      const newDoneLogs = [...updatedDoneLogs, ...(todayDone.length > 0 ? [{ date: today }] : [])]
+      const newDoneLogs = [...updatedDoneLogs, ...(hasDoneToday ? [{ date: today }] : [])]
       setDoneLogs(newDoneLogs)
 
       const newStreak = calculateStreak(newDoneLogs)
@@ -241,7 +243,7 @@ export default function DashboardClient({
       const res = await fetch('/api/generate-review', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: userId, date: today }),
+        body: JSON.stringify({ date: today }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -254,7 +256,7 @@ export default function DashboardClient({
     } finally {
       setGenerating(false)
     }
-  }, [userId, today])
+  }, [today])
 
   const shareToWall = useCallback(
     async (goalId: string) => {
@@ -297,23 +299,26 @@ export default function DashboardClient({
   const firstDoneGoalId = goals.find((g) => statusMap.get(g.id)?.status === 'done')?.id ?? null
 
   return (
-    <div className="max-w-2xl mx-auto space-y-8">
+    <div className="mx-auto max-w-3xl space-y-8">
       {/* Header */}
-      <div className="space-y-1">
-        <p className="text-zinc-500 text-sm">{displayDate}</p>
-        <h1 className="text-2xl font-bold text-zinc-100">
+      <div className="rounded-xl border border-zinc-800 bg-zinc-900/70 p-5 shadow-2xl shadow-black/20">
+        <p className="text-sm font-medium text-amber-300">{displayDate}</p>
+        <h1 className="mt-1 text-2xl font-bold text-zinc-100 sm:text-3xl">
           Hey, {displayName} 👋
         </h1>
+        <p className="mt-2 text-sm text-zinc-500">
+          Mark what moved today, then generate a review when you are done.
+        </p>
       </div>
 
       {/* Stats row */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-1">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="space-y-1 rounded-lg border border-zinc-800 bg-zinc-900 p-4">
           <p className="text-xs text-zinc-500 uppercase tracking-wider">Streak</p>
           <StreakBadge count={streak} size="md" />
         </div>
 
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-1">
+        <div className="space-y-1 rounded-lg border border-zinc-800 bg-zinc-900 p-4">
           <p className="text-xs text-zinc-500 uppercase tracking-wider">Done today</p>
           <p className="text-xl font-bold text-zinc-100">
             {doneCount}
@@ -321,7 +326,7 @@ export default function DashboardClient({
           </p>
         </div>
 
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-1">
+        <div className="space-y-1 rounded-lg border border-zinc-800 bg-zinc-900 p-4">
           <p className="text-xs text-zinc-500 uppercase tracking-wider">Mode</p>
           <p className="text-sm font-semibold capitalize text-amber-400">{mode}</p>
         </div>
@@ -336,9 +341,9 @@ export default function DashboardClient({
               {progressPct}%{doneCount === total ? ' — All done! 🔥' : ''}
             </span>
           </div>
-          <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
+          <div className="h-2.5 overflow-hidden rounded-full bg-zinc-800 ring-1 ring-zinc-700/50">
             <div
-              className="h-full bg-amber-400 rounded-full transition-all duration-500"
+              className="h-full rounded-full bg-gradient-to-r from-amber-500 to-amber-300 transition-all duration-500"
               style={{ width: `${progressPct}%` }}
             />
           </div>
@@ -361,7 +366,7 @@ export default function DashboardClient({
         </div>
 
         {goals.length === 0 ? (
-          <div className="bg-zinc-900 border border-dashed border-zinc-800 rounded-xl p-8 text-center space-y-2">
+          <div className="space-y-2 rounded-lg border border-dashed border-zinc-800 bg-zinc-900/60 p-8 text-center">
             <p className="text-zinc-500 text-sm">No active goals yet.</p>
             <Link href="/goals" className="text-amber-400 text-sm hover:underline">
               Add your first goal →
@@ -409,7 +414,7 @@ export default function DashboardClient({
         </div>
 
         {!review ? (
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 space-y-4">
+          <div className="space-y-4 rounded-lg border border-zinc-800 bg-zinc-900 p-5">
             <p className="text-sm text-zinc-400">
               {mode === 'roast'
                 ? 'Ready to get called out for your slacking?'
@@ -424,7 +429,7 @@ export default function DashboardClient({
             <button
               onClick={generateReview}
               disabled={generating}
-              className="flex items-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-500 disabled:bg-purple-800 disabled:opacity-60 text-white text-sm font-medium rounded-lg transition-colors"
+              className="flex items-center gap-2 rounded-lg bg-purple-500 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-purple-400 disabled:bg-purple-800 disabled:opacity-60"
             >
               {generating ? (
                 <>
@@ -440,7 +445,7 @@ export default function DashboardClient({
             </button>
           </div>
         ) : (
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 space-y-4">
+          <div className="space-y-4 rounded-lg border border-zinc-800 bg-zinc-900 p-5">
             {/* Scores */}
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-1.5">

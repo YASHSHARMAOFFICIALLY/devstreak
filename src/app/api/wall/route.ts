@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { todayDateKey } from '@/lib/date'
 import { NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 
@@ -16,6 +17,12 @@ export async function POST(request: Request) {
 
   const { goalId, isPublic } = await request.json()
 
+  if (!goalId) {
+    return NextResponse.json({ error: 'Missing goalId' }, { status: 400 })
+  }
+
+  const today = todayDateKey()
+
   // Fetch data in parallel
   const [profileRes, goalRes, reviewRes, ghRes] = await Promise.all([
     supabase
@@ -23,7 +30,12 @@ export async function POST(request: Request) {
       .select('streak_count, display_name, github_username, avatar_url, mode')
       .eq('id', user.id)
       .single(),
-    supabase.from('goals').select('title, category').eq('id', goalId).single(),
+    supabase
+      .from('goals')
+      .select('title, category')
+      .eq('id', goalId)
+      .eq('user_id', user.id)
+      .single(),
     supabase
       .from('ai_reviews')
       .select('content, focus_score')
@@ -36,13 +48,17 @@ export async function POST(request: Request) {
       .from('daily_logs')
       .select('goal_id')
       .eq('user_id', user.id)
-      .eq('date', new Date().toISOString().split('T')[0])
+      .eq('date', today)
       .eq('status', 'done'),
   ])
 
   const profile = profileRes.data
   const goal = goalRes.data
   const review = reviewRes.data
+
+  if (goalRes.error || !goal) {
+    return NextResponse.json({ error: 'Goal not found' }, { status: 404 })
+  }
 
   const streakCount = profile?.streak_count ?? 0
   const username = profile?.github_username ?? 'developer'
@@ -73,7 +89,6 @@ export async function POST(request: Request) {
   }
 
   // Check if a wall post already exists for this goal today
-  const today = new Date().toISOString().split('T')[0]
   const { data: existing } = await supabase
     .from('wall_posts')
     .select('id')

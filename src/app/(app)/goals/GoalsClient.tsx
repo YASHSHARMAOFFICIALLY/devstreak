@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { formatDateKey } from '@/lib/date'
 import {
   Plus,
   Trash2,
@@ -70,7 +71,7 @@ function calculateGoalStreak(goalId: string, doneLogs: DoneLog[]): number {
   for (let i = 0; i < 365; i++) {
     const d = new Date(today)
     d.setDate(d.getDate() - i)
-    const dateStr = d.toISOString().split('T')[0]
+    const dateStr = formatDateKey(d)
     if (dateSet.has(dateStr)) {
       streak++
     } else {
@@ -167,7 +168,7 @@ export default function GoalsClient({
     <div className="space-y-6">
       {/* New Goal Form / Button */}
       {showForm ? (
-        <div className="bg-zinc-900 border border-amber-400/20 rounded-xl p-5 space-y-4">
+        <div className="space-y-4 rounded-lg border border-amber-400/20 bg-zinc-900 p-5 shadow-xl shadow-black/20">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold text-zinc-200">New Goal</h3>
             <button
@@ -239,7 +240,7 @@ export default function GoalsClient({
       ) : (
         <button
           onClick={() => setShowForm(true)}
-          className="flex items-center gap-2 bg-amber-400 hover:bg-amber-300 text-zinc-900 font-semibold px-4 py-2.5 rounded-xl text-sm transition-colors"
+          className="flex items-center gap-2 rounded-lg bg-amber-400 px-4 py-2.5 text-sm font-semibold text-zinc-900 shadow-lg shadow-black/20 transition-all hover:-translate-y-0.5 hover:bg-amber-300"
         >
           <Plus className="w-4 h-4" />
           New Goal
@@ -255,7 +256,7 @@ export default function GoalsClient({
         </div>
 
         {active.length === 0 ? (
-          <div className="border border-dashed border-zinc-800 rounded-xl p-8 text-center">
+          <div className="rounded-lg border border-dashed border-zinc-800 bg-zinc-900/60 p-8 text-center">
             <p className="text-zinc-600 text-sm">No active goals yet. Add one above.</p>
           </div>
         ) : (
@@ -331,7 +332,7 @@ function GoalCardFull({
   paused?: boolean
 }) {
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex flex-col gap-3 hover:border-zinc-700 transition-colors group">
+    <div className="group flex flex-col gap-3 rounded-lg border border-zinc-800 bg-zinc-900 p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-zinc-700 hover:shadow-lg hover:shadow-black/20">
       {/* Top: category badge + actions */}
       <div className="flex items-center justify-between">
         <span
@@ -346,7 +347,7 @@ function GoalCardFull({
           {goal.category}
         </span>
 
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center gap-1 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
           <button
             onClick={onToggle}
             className="p-1 rounded text-zinc-600 hover:text-amber-400 transition-colors"

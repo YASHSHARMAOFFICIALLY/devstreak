@@ -6,8 +6,9 @@ import { LayoutDashboard, Target, Flame, Brain, LogOut } from 'lucide-react'
 import clsx from 'clsx'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import { todayDateKey } from '@/lib/date'
 
-const today = new Date().toISOString().split('T')[0]
+const today = todayDateKey()
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -33,15 +34,26 @@ export default function Sidebar({
   }
 
   return (
-    <aside className="w-56 min-h-screen bg-zinc-900 border-r border-zinc-800 flex flex-col shrink-0">
+    <aside className="sticky top-0 z-20 flex shrink-0 flex-col border-b border-zinc-800 bg-zinc-950/95 backdrop-blur md:min-h-screen md:w-56 md:border-b-0 md:border-r md:bg-zinc-900">
       {/* Logo */}
-      <div className="flex items-center gap-2 px-5 py-5 border-b border-zinc-800">
-        <Flame className="w-5 h-5 text-amber-400" />
-        <span className="font-bold text-zinc-100 tracking-tight">DevStreak</span>
+      <div className="flex items-center justify-between gap-3 border-b border-zinc-800 px-4 py-3 md:block md:px-5 md:py-5">
+        <div className="flex items-center gap-2">
+          <span className="grid h-8 w-8 place-items-center rounded-lg bg-amber-400/10 ring-1 ring-amber-400/20">
+            <Flame className="h-4 w-4 text-amber-400" />
+          </span>
+          <span className="font-bold tracking-tight text-zinc-100">DevStreak</span>
+        </div>
+        <button
+          onClick={handleSignOut}
+          className="grid h-8 w-8 place-items-center rounded-lg text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-red-400 md:hidden"
+          title="Sign out"
+        >
+          <LogOut className="h-4 w-4" />
+        </button>
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 px-3 py-4 space-y-1">
+      <nav className="flex gap-1 overflow-x-auto px-3 py-2 md:flex-1 md:flex-col md:space-y-1 md:overflow-visible md:py-4">
         {navItems.map(({ href, label, icon: Icon }) => {
           const isActive =
             href === `/review/${today}`
@@ -53,10 +65,10 @@ export default function Sidebar({
               key={href}
               href={href}
               className={clsx(
-                'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
+                'flex min-w-max items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors md:gap-3',
                 isActive
-                  ? 'bg-amber-400/10 text-amber-400'
-                  : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800'
+                  ? 'bg-amber-400/10 text-amber-300 ring-1 ring-amber-400/15'
+                  : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100'
               )}
             >
               <Icon className="w-4 h-4 shrink-0" />
@@ -67,7 +79,7 @@ export default function Sidebar({
       </nav>
 
       {/* User */}
-      <div className="px-3 py-4 border-t border-zinc-800 space-y-3">
+      <div className="hidden space-y-3 border-t border-zinc-800 px-3 py-4 md:block">
         <div className="flex items-center gap-3 px-3">
           {avatarUrl ? (
             // eslint-disable-next-line @next/next/no-img-element

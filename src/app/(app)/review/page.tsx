@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { lastSevenDateKeys, todayDateKey } from '@/lib/date'
 import { redirect } from 'next/navigation'
 import WeeklyReviewClient from './WeeklyReviewClient'
 
@@ -9,11 +10,9 @@ export default async function ReviewPage() {
   } = await supabase.auth.getUser()
   if (!user) redirect('/')
 
-  const today = new Date()
-  const todayStr = today.toISOString().split('T')[0]
-  const sevenDaysAgo = new Date(today)
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6)
-  const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0]
+  const todayStr = todayDateKey()
+  const days = lastSevenDateKeys(todayStr)
+  const sevenDaysAgoStr = days[0]
 
   const [{ data: logs }, { data: reviews }, { data: goals }] = await Promise.all([
     supabase
@@ -35,14 +34,6 @@ export default async function ReviewPage() {
       .select('id, title')
       .eq('user_id', user.id),
   ])
-
-  // Build the 7-day range
-  const days: string[] = []
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date(today)
-    d.setDate(d.getDate() - i)
-    days.push(d.toISOString().split('T')[0])
-  }
 
   return (
     <WeeklyReviewClient

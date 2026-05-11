@@ -21,12 +21,12 @@ export default async function AppLayout({
     .single()
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen flex-col bg-zinc-950 md:flex-row">
       <Sidebar
         username={profile?.github_username ?? profile?.display_name}
         avatarUrl={profile?.avatar_url}
       />
-      <main className="flex-1 overflow-y-auto p-8">{children}</main>
+      <main className="flex-1 overflow-y-auto px-4 py-6 sm:px-6 md:p-8">{children}</main>
     </div>
   )
 }

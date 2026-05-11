@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { todayDateKey } from '@/lib/date'
 import { redirect } from 'next/navigation'
 import DashboardClient from './DashboardClient'
 
@@ -9,7 +10,7 @@ export default async function DashboardPage() {
   } = await supabase.auth.getUser()
   if (!user) redirect('/')
 
-  const today = new Date().toISOString().split('T')[0]
+  const today = todayDateKey()
 
   const [{ data: profile }, { data: goals }, { data: todayLogs }, { data: allDoneLogs }, { data: existingReview }] =
     await Promise.all([

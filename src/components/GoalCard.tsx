@@ -58,7 +58,7 @@ export default function GoalCard({
   category: Category
   initialStatus: Status
   date: string
-  onStatusChange?: (goalId: string, status: Status) => void
+  onStatusChange?: (goalId: string, status: Status, logId?: string) => void
 }) {
   const [status, setStatus] = useState<Status>(initialStatus)
   const [logId, setLogId] = useState<string | undefined>(initialLogId)
@@ -68,31 +68,46 @@ export default function GoalCard({
   async function updateStatus(newStatus: Status) {
     if (loading) return
     setLoading(true)
+    const previousStatus = status
     setStatus(newStatus)
 
+    let savedLogId = logId
+    let error: { message?: string } | null = null
+
     if (logId) {
-      await supabase
+      const result = await supabase
         .from('daily_logs')
         .update({ status: newStatus })
         .eq('id', logId)
+      error = result.error
     } else {
-      const { data } = await supabase
+      const { data, error: insertError } = await supabase
         .from('daily_logs')
         .insert({ goal_id: goalId, user_id: userId, date, status: newStatus })
         .select('id')
         .single()
-      if (data?.id) setLogId(data.id)
+      error = insertError
+      if (data?.id) {
+        savedLogId = data.id
+        setLogId(data.id)
+      }
     }
 
-    onStatusChange?.(goalId, newStatus)
+    if (error) {
+      setStatus(previousStatus)
+      setLoading(false)
+      return
+    }
+
+    onStatusChange?.(goalId, newStatus, savedLogId)
     setLoading(false)
   }
 
   return (
     <div
       className={clsx(
-        'bg-zinc-900 border rounded-xl p-4 flex items-center justify-between gap-4 transition-all duration-150',
-        status === 'done' && 'border-green-500/30 bg-green-500/5',
+        'flex items-center justify-between gap-4 rounded-lg border bg-zinc-900 p-4 shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:border-zinc-700 hover:shadow-lg hover:shadow-black/20',
+        status === 'done' && 'border-green-500/30 bg-green-500/5 shadow-green-950/10',
         status === 'skip' && 'border-zinc-700 opacity-60',
         status === 'pending' && 'border-zinc-800'
       )}
@@ -105,7 +120,7 @@ export default function GoalCard({
         <div className="min-w-0">
           <p
             className={clsx(
-              'text-sm font-medium truncate',
+            'truncate text-sm font-semibold',
               status === 'done' ? 'text-zinc-500 line-through' : 'text-zinc-100'
             )}
           >
@@ -113,7 +128,7 @@ export default function GoalCard({
           </p>
           <span
             className={clsx(
-              'inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded border mt-0.5',
+            'mt-1 inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
               categoryColors[category]
             )}
           >

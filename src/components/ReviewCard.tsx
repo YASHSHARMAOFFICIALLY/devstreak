@@ -13,7 +13,7 @@ export default function ReviewCard({ review }: { review: Review }) {
   const score = review.focus_score ?? 0
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 space-y-5">
+    <div className="space-y-5 rounded-lg border border-zinc-800 bg-zinc-900 p-6 shadow-sm shadow-black/20">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -31,7 +31,7 @@ export default function ReviewCard({ review }: { review: Review }) {
 
       {/* Burnout flag */}
       {review.burnout_flag && (
-        <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+        <div className="flex items-center gap-2 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2">
           <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
           <p className="text-sm text-red-300">Burnout risk detected. Take it easy.</p>
         </div>

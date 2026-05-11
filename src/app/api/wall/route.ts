@@ -24,8 +24,7 @@ export async function GET() {
     .select(`
       id, goal_id, streak_count, tweet_draft, focus_score, created_at, is_public,
       users ( github_username, display_name, avatar_url ),
-      goals ( title, category ),
-      ai_reviews ( content, focus_score )
+      goals ( title, category )
     `)
     .eq('is_public', true)
     .order('created_at', { ascending: false })
@@ -41,7 +40,7 @@ export async function GET() {
         ...post,
         users: firstRelation(post.users),
         goals: firstRelation(post.goals),
-        ai_reviews: firstRelation(post.ai_reviews),
+        ai_reviews: null,
       })),
     },
     {
